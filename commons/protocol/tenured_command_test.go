@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestRemotingCommand(t *testing.T) {
+func TestCommand(t *testing.T) {
 	request := NewRequest(1)
 	assert.False(t, request.IsACK())
 	assert.False(t, request.IsOneway())
@@ -33,7 +33,7 @@ func TestRemotingCommand(t *testing.T) {
 	assert.Equal(t, req2.Id, uint32(2))
 }
 
-func TestRemotingCommand_MapHeader(t *testing.T) {
+func TestCommand_MapHeader(t *testing.T) {
 	rc := NewRequest(1)
 
 	jsonData := map[string]string{}
@@ -53,7 +53,7 @@ type AuthInfoHeader struct {
 	Password string `json:"password"`
 }
 
-func TestRemotingCommand_ObjHeader(t *testing.T) {
+func TestCommand_ObjHeader(t *testing.T) {
 	rc := NewRequest(1)
 
 	auth := &AuthInfoHeader{User: "test", Password: "pawd"}

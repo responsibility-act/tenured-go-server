@@ -19,7 +19,7 @@ func init() {
 	atomicId = atomic.AtomicUInt32{}
 }
 
-type remotingCommand struct {
+type tenuredCommand struct {
 	//消息ID，每个消息均要发送且每次发送都要递增，这样用户区分用户发送的消息。当发送消息达到最大后从零开始（如果可能的话）
 	Id uint32
 
@@ -39,32 +39,32 @@ type remotingCommand struct {
 	Body []byte
 }
 
-func (this *remotingCommand) String() string {
+func (this *tenuredCommand) String() string {
 	return fmt.Sprintf("id=%d, code=%d, version=%d, flag=%d, header:%s, body:%v", this.Id, this.Code, this.Version, this.Flag, string(this.Header), this.Body)
 }
 
-func (this *remotingCommand) IsSuccess() bool {
+func (this *tenuredCommand) IsSuccess() bool {
 	return this.Code == SUCCESS
 }
-func (this *remotingCommand) IsACK() bool {
+func (this *tenuredCommand) IsACK() bool {
 	return (this.Flag & ACK) == ACK
 }
 
-func (this *remotingCommand) IsOneway() bool {
+func (this *tenuredCommand) IsOneway() bool {
 	return (this.Flag & ONEWAY) == ONEWAY
 }
 
-func (this *remotingCommand) MakeACK() *remotingCommand {
+func (this *tenuredCommand) MakeACK() *tenuredCommand {
 	this.Flag = this.Flag | ACK
 	return this
 }
 
-func (this *remotingCommand) MakeOneway() *remotingCommand {
+func (this *tenuredCommand) MakeOneway() *tenuredCommand {
 	this.Flag = this.Flag | ONEWAY
 	return this
 }
 
-func (this *remotingCommand) SetHeader(header interface{}) error {
+func (this *tenuredCommand) SetHeader(header interface{}) error {
 	if header == nil {
 		return NO_HEADER
 	}
@@ -76,25 +76,25 @@ func (this *remotingCommand) SetHeader(header interface{}) error {
 	}
 }
 
-func (this *remotingCommand) GetHeader(header interface{}) error {
+func (this *tenuredCommand) GetHeader(header interface{}) error {
 	if header == nil {
 		return NO_HEADER
 	}
 	return json.Unmarshal(this.Header, header)
 }
 
-func (this *remotingCommand) Error(error, message string) *remotingCommand {
+func (this *tenuredCommand) Error(error, message string) *tenuredCommand {
 	this.Code = uint16(1)
 	this.Header = []byte(error)
 	this.Body = []byte(message)
 	return this
 }
 
-func (this *remotingCommand) RemotingError(error commons.RemotingError) *remotingCommand {
+func (this *tenuredCommand) RemotingError(error commons.RemotingError) *tenuredCommand {
 	return this.Error(error.Code, error.Message)
 }
 
-func (this *remotingCommand) GetError() *commons.RemotingError {
+func (this *tenuredCommand) GetError() *commons.RemotingError {
 	if !this.IsACK() || this.IsSuccess() {
 		return nil
 	}
@@ -104,15 +104,15 @@ func (this *remotingCommand) GetError() *commons.RemotingError {
 	}
 }
 
-func NewRequest(code uint16) *remotingCommand {
-	rc := &remotingCommand{}
+func NewRequest(code uint16) *tenuredCommand {
+	rc := &tenuredCommand{}
 	rc.Id = atomicId.IncrementAndGet()
 	rc.Code = code
 	return rc
 }
 
-func NewACK(id uint32) *remotingCommand {
-	rc := &remotingCommand{}
+func NewACK(id uint32) *tenuredCommand {
+	rc := &tenuredCommand{}
 	rc.Id = id
 	rc.Code = SUCCESS
 	rc.MakeACK()
