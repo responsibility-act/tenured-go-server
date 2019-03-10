@@ -21,7 +21,7 @@ type Channel interface {
 }
 
 type defChannel struct {
-	config *remotingConfig
+	config *RemotingConfig
 
 	addr    string
 	conn    *net.TCPConn
@@ -49,11 +49,16 @@ func (this *defChannel) ChannelAttributes() map[string]string {
 func (this *defChannel) Write(msg interface{}, timeout time.Duration) error {
 	var err error = nil
 	commons.Try(func() {
-		if err := this.coder.Encode(msg, this.conn); err != nil {
+		if bs, err := this.coder.Encode(msg); err != nil {
+			panic(err)
+		} else if len(bs) > this.config.PacketBytesLimit {
+			panic(ErrPacketBytesLimit)
+		} else if _, err := this.conn.Write(bs); err != nil {
 			panic(err)
 		}
 	}, func(e error) {
 		err = e
+		this.handler.OnError(this, ErrEncoder, e)
 	})
 	return err
 }
@@ -150,7 +155,7 @@ func (this *defChannel) syncDo(fn func()) {
 	fn()
 }
 
-func NewChannel(conn *net.TCPConn, config *remotingConfig) *defChannel {
+func NewChannel(conn *net.TCPConn, config *RemotingConfig) *defChannel {
 	channel := &defChannel{
 		config:     config,
 		conn:       conn,

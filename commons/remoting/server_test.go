@@ -7,13 +7,13 @@ import (
 )
 
 func TestNewRemotingServer(t *testing.T) {
-	err, server := NewRemotingServer(nil)
+	server, err := NewRemotingServer(nil)
 	assert.Nil(t, err)
 
-	server.SetCoderFactory(func(channel Channel) Coder {
+	server.SetCoderFactory(func(channel Channel, config RemotingConfig) Coder {
 		return DefaultCoder()
 	})
-	server.SetHandlerFactory(func(channel Channel) Handler {
+	server.SetHandlerFactory(func(channel Channel, config RemotingConfig) Handler {
 		return &HandlerWrapper{}
 	})
 	err = server.Start()

@@ -21,7 +21,7 @@ type Handler interface {
 	OnClose(c Channel)
 }
 
-type HandlerFactory func(Channel) Handler
+type HandlerFactory func(Channel, RemotingConfig) Handler
 
 type HandlerWrapper struct {
 }

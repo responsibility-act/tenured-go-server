@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-type remotingServer struct {
-	config  *remotingConfig
+type RemotingServer struct {
+	config  *RemotingConfig
 	clients map[string]Channel
 
 	exitChanOne *sync.Once
@@ -20,17 +20,17 @@ type remotingServer struct {
 	handlerFactory HandlerFactory
 }
 
-func (this *remotingServer) SetCoderFactory(coderFactory func(Channel) Coder) *remotingServer {
+func (this *RemotingServer) SetCoderFactory(coderFactory CoderFactory) *RemotingServer {
 	this.coderFactory = coderFactory
 	return this
 }
 
-func (this *remotingServer) SetHandlerFactory(handlerFactory func(Channel) Handler) *remotingServer {
+func (this *RemotingServer) SetHandlerFactory(handlerFactory HandlerFactory) *RemotingServer {
 	this.handlerFactory = handlerFactory
 	return this
 }
 
-func (this *remotingServer) Start() error {
+func (this *RemotingServer) Start() error {
 	if this.coderFactory == nil {
 		return ErrNoCoder
 	}
@@ -47,7 +47,7 @@ func (this *remotingServer) Start() error {
 		return nil
 	}
 }
-func (this *remotingServer) startListener(listener *net.TCPListener) {
+func (this *RemotingServer) startListener(listener *net.TCPListener) {
 	this.waitGroup.Add(1)
 	defer func() {
 		_ = listener.Close()
@@ -79,7 +79,7 @@ func (this *remotingServer) startListener(listener *net.TCPListener) {
 	}
 }
 
-func (this *remotingServer) newChannel(conn *net.TCPConn) Channel {
+func (this *RemotingServer) newChannel(conn *net.TCPConn) Channel {
 	this.waitGroup.Add(1)
 
 	addr := conn.RemoteAddr().String()
@@ -87,8 +87,8 @@ func (this *remotingServer) newChannel(conn *net.TCPConn) Channel {
 
 	channel := NewChannel(conn, this.config)
 	channel.waitGroup = this.waitGroup
-	channel.coder = this.coderFactory(channel)
-	channel.handler = this.handlerFactory(channel)
+	channel.coder = this.coderFactory(channel, *this.config)
+	channel.handler = this.handlerFactory(channel, *this.config)
 
 	channel.Do(func(ch Channel) {
 		logrus.Debugf("Client close：%s", ch)
@@ -98,7 +98,7 @@ func (this *remotingServer) newChannel(conn *net.TCPConn) Channel {
 	return channel
 }
 
-func (this *remotingServer) closeChannels() {
+func (this *RemotingServer) closeChannels() {
 	for _, v := range this.clients {
 		if v != nil {
 			v.Close()
@@ -106,7 +106,7 @@ func (this *remotingServer) closeChannels() {
 	}
 }
 
-func (this *remotingServer) Shutdown() {
+func (this *RemotingServer) Shutdown() {
 	this.exitChanOne.Do(func() {
 		logrus.Infof("Turn off the server")
 		close(this.exitChan)
@@ -116,15 +116,15 @@ func (this *remotingServer) Shutdown() {
 	this.waitGroup.Wait()
 }
 
-func NewRemotingServer(config *remotingConfig) (error, *remotingServer) {
+func NewRemotingServer(config *RemotingConfig) (*RemotingServer, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
-	server := &remotingServer{
+	server := &RemotingServer{
 		config:   config,
 		clients:  make(map[string]Channel),
 		exitChan: make(chan struct{}), exitChanOne: &sync.Once{},
 		waitGroup: &sync.WaitGroup{},
 	}
-	return nil, server
+	return server, nil
 }

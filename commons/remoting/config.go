@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 )
 
-type remotingConfig struct {
+type RemotingConfig struct {
 	Listen string
 	// the limit of packet send channel
-	PacketBytesLimit uint32 `json:"packed_bytes_limit" yaml:"packed_bytes_limit"`
+	PacketBytesLimit int `json:"packed_bytes_limit" yaml:"packed_bytes_limit"`
 
 	AcceptTimeout int `json:"accept_timeout" yaml:"accept_timeout"`
 
@@ -18,15 +18,15 @@ type remotingConfig struct {
 	IdleTimeout int `json:"idle_timeout" yaml:"idle_timeout"`
 }
 
-func (cfg *remotingConfig) String() string {
+func (cfg *RemotingConfig) String() string {
 	bs, _ := json.Marshal(cfg)
 	return string(bs)
 }
 
-func DefaultConfig() *remotingConfig {
-	return &remotingConfig{
+func DefaultConfig() *RemotingConfig {
+	return &RemotingConfig{
 		Listen:           ":6071",
-		PacketBytesLimit: uint32(1024),
+		PacketBytesLimit: 1024,
 		AcceptTimeout:    3,
 		IdleTime:         15 * 1000,
 		IdleTimeout:      3,

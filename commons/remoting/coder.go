@@ -7,10 +7,10 @@ import (
 
 type Coder interface {
 	Decode(io.Reader) (interface{}, error)
-	Encode(interface{}, io.Writer) error
+	Encode(interface{}) ([]byte, error)
 }
 
-type CoderFactory func(Channel) Coder
+type CoderFactory func(Channel, RemotingConfig) Coder
 
 type Bytes1024Coder struct{}
 
@@ -25,12 +25,11 @@ func (this *Bytes1024Coder) Decode(reader io.Reader) (interface{}, error) {
 	}
 }
 
-func (this *Bytes1024Coder) Encode(msg interface{}, writer io.Writer) error {
+func (this *Bytes1024Coder) Encode(msg interface{}) ([]byte, error) {
 	if bs, ok := msg.([]byte); ok {
-		_, err := writer.Write(bs)
-		return err
+		return bs, nil
 	} else {
-		return os.ErrInvalid
+		return nil, os.ErrInvalid
 	}
 }
 

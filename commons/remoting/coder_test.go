@@ -17,15 +17,10 @@ func TestDefaultCoder_Decode(t *testing.T) {
 }
 
 func TestBytes1024Coder_Encode(t *testing.T) {
-	writer := bytes.NewBuffer(make([]byte, 0))
-	err := coder.Encode(1, writer)
+	bs, err := coder.Encode(1)
 	assert.Equal(t, err, os.ErrInvalid)
 
-	err = coder.Encode([]byte("test"), writer)
+	bs, err = coder.Encode([]byte("test"))
 	assert.Nil(t, err)
-	bs := make([]byte, 1024)
-	r, err := writer.Read(bs)
-	assert.Nil(t, err)
-	assert.Equal(t, r, 4)
-	assert.Equal(t, "test", string(bs[:r]))
+	assert.Equal(t, bs, []byte("test"))
 }
