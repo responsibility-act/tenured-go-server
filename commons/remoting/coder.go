@@ -5,16 +5,16 @@ import (
 	"os"
 )
 
-type Coder interface {
-	Decode(io.Reader) (interface{}, error)
-	Encode(interface{}) ([]byte, error)
+type RemotingCoder interface {
+	Decode(RemotingChannel, io.Reader) (interface{}, error)
+	Encode(RemotingChannel, interface{}) ([]byte, error)
 }
 
-type CoderFactory func(Channel, RemotingConfig) Coder
+type RemotingCoderFactory func(RemotingChannel, RemotingConfig) RemotingCoder
 
 type Bytes1024Coder struct{}
 
-func (this *Bytes1024Coder) Decode(reader io.Reader) (interface{}, error) {
+func (this *Bytes1024Coder) Decode(channel RemotingChannel, reader io.Reader) (interface{}, error) {
 	bs := make([]byte, 1024)
 	if length, err := reader.Read(bs); err == nil && length > 0 {
 		return bs[:length], nil
@@ -25,7 +25,7 @@ func (this *Bytes1024Coder) Decode(reader io.Reader) (interface{}, error) {
 	}
 }
 
-func (this *Bytes1024Coder) Encode(msg interface{}) ([]byte, error) {
+func (this *Bytes1024Coder) Encode(channel RemotingChannel, msg interface{}) ([]byte, error) {
 	if bs, ok := msg.([]byte); ok {
 		return bs, nil
 	} else {
@@ -33,6 +33,6 @@ func (this *Bytes1024Coder) Encode(msg interface{}) ([]byte, error) {
 	}
 }
 
-func DefaultCoder() Coder {
+func DefaultCoder() RemotingCoder {
 	return &Bytes1024Coder{}
 }

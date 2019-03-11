@@ -29,7 +29,7 @@ func (self *SetFuture) Exception(err error) bool {
 
 func Set() *SetFuture {
 	f := &SetFuture{}
-	f.resultChan = make(chan interface{}, 0)
+	f.resultChan = make(chan interface{}, 1)
 	f.status = S_RUNNING
 	return f
 }

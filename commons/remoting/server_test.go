@@ -10,10 +10,10 @@ func TestNewRemotingServer(t *testing.T) {
 	server, err := NewRemotingServer(nil)
 	assert.Nil(t, err)
 
-	server.SetCoderFactory(func(channel Channel, config RemotingConfig) Coder {
+	server.SetCoderFactory(func(channel RemotingChannel, config RemotingConfig) RemotingCoder {
 		return DefaultCoder()
 	})
-	server.SetHandlerFactory(func(channel Channel, config RemotingConfig) Handler {
+	server.SetHandlerFactory(func(channel RemotingChannel, config RemotingConfig) RemotingHandler {
 		return &HandlerWrapper{}
 	})
 	err = server.Start()

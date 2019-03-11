@@ -29,7 +29,7 @@ func Catch(r interface{}) error {
 		} else if er, ok := r.(string); ok {
 			e = errors.New(er)
 		} else {
-			e = errors.New(fmt.Sprintf("%s", r))
+			e = errors.New(fmt.Sprintf("%v", r))
 		}
 	}
 	return e

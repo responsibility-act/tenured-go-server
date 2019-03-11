@@ -10,24 +10,36 @@ import (
 
 type RemotingServer struct {
 	config  *RemotingConfig
-	clients map[string]Channel
+	clients map[string]RemotingChannel
 
 	exitChanOne *sync.Once
 	exitChan    chan struct{} // notify all goroutines to shutdown
 
 	waitGroup      *sync.WaitGroup // wait for all goroutines
-	coderFactory   CoderFactory
-	handlerFactory HandlerFactory
+	coderFactory   RemotingCoderFactory
+	handlerFactory RemotingHandlerFactory
 }
 
-func (this *RemotingServer) SetCoderFactory(coderFactory CoderFactory) *RemotingServer {
+func (this *RemotingServer) SetCoderFactory(coderFactory RemotingCoderFactory) *RemotingServer {
 	this.coderFactory = coderFactory
 	return this
 }
 
-func (this *RemotingServer) SetHandlerFactory(handlerFactory HandlerFactory) *RemotingServer {
+func (this *RemotingServer) SetCoder(coder RemotingCoder) *RemotingServer {
+	return this.SetCoderFactory(func(channel RemotingChannel, config RemotingConfig) RemotingCoder {
+		return coder
+	})
+}
+
+func (this *RemotingServer) SetHandlerFactory(handlerFactory RemotingHandlerFactory) *RemotingServer {
 	this.handlerFactory = handlerFactory
 	return this
+}
+
+func (this *RemotingServer) SetHandler(handler RemotingHandler) *RemotingServer {
+	return this.SetHandlerFactory(func(channel RemotingChannel, config RemotingConfig) RemotingHandler {
+		return handler
+	})
 }
 
 func (this *RemotingServer) Start() error {
@@ -79,7 +91,7 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 	}
 }
 
-func (this *RemotingServer) newChannel(conn *net.TCPConn) Channel {
+func (this *RemotingServer) newChannel(conn *net.TCPConn) RemotingChannel {
 	this.waitGroup.Add(1)
 
 	addr := conn.RemoteAddr().String()
@@ -90,7 +102,7 @@ func (this *RemotingServer) newChannel(conn *net.TCPConn) Channel {
 	channel.coder = this.coderFactory(channel, *this.config)
 	channel.handler = this.handlerFactory(channel, *this.config)
 
-	channel.Do(func(ch Channel) {
+	channel.Do(func(ch RemotingChannel) {
 		logrus.Debugf("Client close：%s", ch)
 		delete(this.clients, ch.RemoteAddr())
 		this.waitGroup.Done()
@@ -122,7 +134,7 @@ func NewRemotingServer(config *RemotingConfig) (*RemotingServer, error) {
 	}
 	server := &RemotingServer{
 		config:   config,
-		clients:  make(map[string]Channel),
+		clients:  make(map[string]RemotingChannel),
 		exitChan: make(chan struct{}), exitChanOne: &sync.Once{},
 		waitGroup: &sync.WaitGroup{},
 	}
