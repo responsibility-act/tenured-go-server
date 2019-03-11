@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -22,11 +21,11 @@ func TestCommand(t *testing.T) {
 
 	t.Log(response.GetError())
 
-	response.RemotingError(commons.NewRemotingError("1002", "test error2"))
+	response.RemotingError(TenuredError{"1002", "test error2"})
 
 	re := response.GetError()
 
-	assert.Equal(t, re.Code, "1002")
+	assert.Equal(t, re.(*TenuredError).Code, "1002")
 	t.Log(re)
 
 	req2 := NewRequest(2)

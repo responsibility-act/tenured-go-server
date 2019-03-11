@@ -1,13 +1,30 @@
 package remoting
 
-import "github.com/ihaiker/tenured-go-server/commons"
+import (
+	"fmt"
+)
+
+type ErrorType string
 
 const (
-	ErrNoCoder          = commons.Error("coder is nil")
-	ErrNoHandler        = commons.Error("handler is nil")
-	ErrPacketBytesLimit = commons.Error("packet is limit")
-	ErrClosed           = commons.Error("closed")
-	ErrSendTimeout      = commons.Error("send timeout")
-	ErrEncoder          = commons.Error("error in encoder")
-	ErrDecoder          = commons.Error("error in decoder")
+	ErrCoder   = ErrorType("Coder")
+	ErrEncoder = ErrorType("Encoder")
+	ErrDecoder = ErrorType("Decoder")
+
+	ErrHandler = ErrorType("Handler")
+
+	ErrPacketBytesLimit = ErrorType("PacketBytesLimit")
+	ErrClosed           = ErrorType("Closed")
+	ErrSendTimeout      = ErrorType("Timeout")
+
+	ErrNoChannel = ErrorType("NoChannel")
 )
+
+type RemotingError struct {
+	Err error
+	Op  ErrorType
+}
+
+func (this *RemotingError) Error() string {
+	return fmt.Sprintf("[%s]%s", this.Op, this.Err.Error())
+}

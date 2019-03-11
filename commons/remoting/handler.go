@@ -30,7 +30,7 @@ func (h *HandlerWrapper) OnChannel(c RemotingChannel) {
 	logrus.Debugf("RemotingHandler OnChannel %s", c.RemoteAddr())
 }
 func (h *HandlerWrapper) OnMessage(c RemotingChannel, msg interface{}) {
-	logrus.Debugf("RemotingHandler OnMessage %s : msg:%s", c.RemoteAddr(), msg)
+	logrus.Debugf("RemotingHandler OnMessage %s : msg:%v", c.RemoteAddr(), msg)
 }
 
 func (h *HandlerWrapper) OnClose(c RemotingChannel) {
@@ -38,7 +38,7 @@ func (h *HandlerWrapper) OnClose(c RemotingChannel) {
 }
 
 func (h *HandlerWrapper) OnError(c RemotingChannel, err error, msg interface{}) {
-	logrus.Debugf("RemotingHandler OnError %s : %s ,%s", c.RemoteAddr(), err, msg)
+	logrus.Debugf("RemotingHandler OnError %s : %s ,%v", c.RemoteAddr(), err, msg)
 }
 
 func (h *HandlerWrapper) OnIdle(c RemotingChannel) {

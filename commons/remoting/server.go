@@ -3,54 +3,21 @@ package remoting
 import (
 	"github.com/sirupsen/logrus"
 	"net"
-	"strings"
 	"sync"
 	"time"
 )
 
 type RemotingServer struct {
-	config  *RemotingConfig
-	clients map[string]RemotingChannel
-
-	exitChanOne *sync.Once
-	exitChan    chan struct{} // notify all goroutines to shutdown
-
-	waitGroup      *sync.WaitGroup // wait for all goroutines
-	coderFactory   RemotingCoderFactory
-	handlerFactory RemotingHandlerFactory
-}
-
-func (this *RemotingServer) SetCoderFactory(coderFactory RemotingCoderFactory) *RemotingServer {
-	this.coderFactory = coderFactory
-	return this
-}
-
-func (this *RemotingServer) SetCoder(coder RemotingCoder) *RemotingServer {
-	return this.SetCoderFactory(func(channel RemotingChannel, config RemotingConfig) RemotingCoder {
-		return coder
-	})
-}
-
-func (this *RemotingServer) SetHandlerFactory(handlerFactory RemotingHandlerFactory) *RemotingServer {
-	this.handlerFactory = handlerFactory
-	return this
-}
-
-func (this *RemotingServer) SetHandler(handler RemotingHandler) *RemotingServer {
-	return this.SetHandlerFactory(func(channel RemotingChannel, config RemotingConfig) RemotingHandler {
-		return handler
-	})
+	address string
+	Remoting
 }
 
 func (this *RemotingServer) Start() error {
-	if this.coderFactory == nil {
-		return ErrNoCoder
-	}
-	if this.handlerFactory == nil {
-		return ErrNoHandler
+	if err := this.Remoting.Start(); err != nil {
+		return nil
 	}
 
-	if tcpAddr, err := net.ResolveTCPAddr("tcp4", this.config.Listen); err != nil {
+	if tcpAddr, err := net.ResolveTCPAddr("tcp4", this.address); err != nil {
 		return err
 	} else if listener, err := net.ListenTCP("tcp", tcpAddr); err != nil {
 		return err
@@ -66,7 +33,7 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 		this.waitGroup.Done()
 		this.Shutdown()
 	}()
-	logrus.Infof("service startup：%s", listener.Addr().String())
+	logrus.Infof("server startup：%s", listener.Addr().String())
 
 	acceptTimeout := time.Second * time.Duration(this.config.AcceptTimeout)
 	for {
@@ -77,66 +44,31 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 		default:
 			conn, err := listener.AcceptTCP()
 			if err != nil {
-				if strings.Contains(err.Error(), "i/o timeout") {
+				if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
 					continue
 				} else {
 					logrus.Errorf("Service monitoring error：%s", err)
 					return
 				}
 			}
-			channel := this.newChannel(conn)
-			addr := channel.RemoteAddr()
-			this.clients[addr] = channel
+			address := conn.RemoteAddr().String()
+			_ = this.newChannel(address, conn)
 		}
 	}
 }
-
-func (this *RemotingServer) newChannel(conn *net.TCPConn) RemotingChannel {
-	this.waitGroup.Add(1)
-
-	addr := conn.RemoteAddr().String()
-	logrus.Infof("Client connection server：%s", addr)
-
-	channel := NewChannel(conn, this.config)
-	channel.waitGroup = this.waitGroup
-	channel.coder = this.coderFactory(channel, *this.config)
-	channel.handler = this.handlerFactory(channel, *this.config)
-
-	channel.Do(func(ch RemotingChannel) {
-		logrus.Debugf("Client close：%s", ch)
-		delete(this.clients, ch.RemoteAddr())
-		this.waitGroup.Done()
-	})
-	return channel
-}
-
-func (this *RemotingServer) closeChannels() {
-	for _, v := range this.clients {
-		if v != nil {
-			v.Close()
-		}
-	}
-}
-
-func (this *RemotingServer) Shutdown() {
-	this.exitChanOne.Do(func() {
-		logrus.Infof("Turn off the server")
-		close(this.exitChan)
-		this.closeChannels()
-		logrus.Infof("Service has stopped.")
-	})
-	this.waitGroup.Wait()
-}
-
-func NewRemotingServer(config *RemotingConfig) (*RemotingServer, error) {
+func NewRemotingServer(address string, config *RemotingConfig) (*RemotingServer, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
 	server := &RemotingServer{
-		config:   config,
-		clients:  make(map[string]RemotingChannel),
-		exitChan: make(chan struct{}), exitChanOne: &sync.Once{},
-		waitGroup: &sync.WaitGroup{},
+		address: address,
+		Remoting: Remoting{
+			config:      config,
+			channels:    make(map[string]RemotingChannel),
+			exitChan:    make(chan struct{}),
+			exitChanOne: &sync.Once{},
+			waitGroup:   &sync.WaitGroup{},
+		},
 	}
 	return server, nil
 }

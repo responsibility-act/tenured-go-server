@@ -20,7 +20,7 @@ func TestTenuredCoder(t *testing.T) {
 	d1, err := c.Decode(reader)
 	assert.Nil(t, err)
 
-	decodeReq := d1.(*tenuredCommand)
+	decodeReq := d1.(*TenuredCommand)
 	assert.Equal(t, decodeReq.Id, request.Id)
 	assert.Equal(t, decodeReq.Id, uint32(1))
 	assert.Equal(t, decodeReq.Code, request.Code)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewRemotingServer(t *testing.T) {
-	server, err := NewRemotingServer(nil)
+	server, err := NewRemotingServer(":6071", nil)
 	assert.Nil(t, err)
 
 	server.SetCoderFactory(func(channel RemotingChannel, config RemotingConfig) RemotingCoder {
@@ -18,6 +18,8 @@ func TestNewRemotingServer(t *testing.T) {
 	})
 	err = server.Start()
 	assert.Nil(t, err)
+
+	_ = server.SendTo("127.0.0.1:8080", []byte("123123"), time.Second)
 
 	time.Sleep(time.Second)
 

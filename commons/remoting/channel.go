@@ -1,10 +1,12 @@
 package remoting
 
 import (
+	"errors"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -60,55 +62,67 @@ func (this *defChannel) ChannelAttributes() map[string]string {
 func (this *defChannel) encodeMessage(msg interface{}) (bs []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = commons.Catch(e)
-			if !this.isClosed(err) {
-				this.handler.OnError(this, ErrEncoder, err)
+			catchErr := commons.Catch(e)
+			if !this.isClosed(catchErr) {
+				err = &RemotingError{Op: ErrEncoder, Err: catchErr}
+				this.handler.OnError(this, err, msg)
 			}
 		}
 	}()
 
 	if bs, err = this.coder.Encode(this, msg); err != nil {
+		if rerr, ok := err.(*RemotingError); ok {
+			err = rerr
+		} else {
+			err = &RemotingError{Op: ErrDecoder, Err: err}
+		}
 		return nil, err
 	} else if len(bs) > this.config.PacketBytesLimit {
-		return nil, ErrPacketBytesLimit
+		return nil, &RemotingError{Op: ErrPacketBytesLimit, Err: errors.New("the packet limit size " + strconv.Itoa(this.config.PacketBytesLimit))}
 	} else {
 		return bs, nil
 	}
 }
 
-func (this *defChannel) Write(msg interface{}, timeout time.Duration) error {
+func (this *defChannel) write(msg interface{}, timeout time.Duration, callback func(error)) error {
 	timeoutTime := time.Now().Add(timeout)
 	if bs, err := this.encodeMessage(msg); err != nil {
+		if callback != nil {
+			callback(err)
+		}
 		return err
 	} else {
-		if timeoutTime.After(time.Now()) { //encode timeout
-			return ErrSendTimeout
+		if timeoutTime.Before(time.Now()) { //encode timeout
+			err := &RemotingError{Op: ErrSendTimeout, Err: errors.New("send timeout: " + timeout.String())}
+			if callback != nil {
+				callback(err)
+			}
+			return err
 		}
-		result := make(chan error, 1)
-		this.sendChan <- sendMessage{msg: bs, timeout: time.Now().Add(timeout), result: result}
-		err := <-result
-		close(result)
-		return err
-	}
-}
-func (this *defChannel) AsyncWrite(msg interface{}, timeout time.Duration, callback func(error)) {
-	timeoutTime := time.Now().Add(timeout)
-	if bs, err := this.encodeMessage(msg); err != nil {
-		callback(err)
-		return
-	} else {
-		if timeoutTime.After(time.Now()) { //encode timeout
-			callback(ErrSendTimeout)
-			return
-		}
-		go func() {
+		fn := func() error {
 			result := make(chan error, 1)
 			this.sendChan <- sendMessage{msg: bs, timeout: time.Now().Add(timeout), result: result}
 			err := <-result
 			close(result)
-			callback(err)
-		}()
+			if callback != nil {
+				callback(err)
+			}
+			return err
+		}
+		if callback == nil {
+			return fn()
+		} else {
+			go fn()
+			return nil
+		}
 	}
+}
+
+func (this *defChannel) Write(msg interface{}, timeout time.Duration) error {
+	return this.write(msg, timeout, nil)
+}
+func (this *defChannel) AsyncWrite(msg interface{}, timeout time.Duration, callback func(error)) {
+	_ = this.write(msg, timeout, callback)
 }
 
 func (this *defChannel) Do(onClose func(channel RemotingChannel)) {
@@ -121,11 +135,12 @@ func (this *defChannel) Do(onClose func(channel RemotingChannel)) {
 
 func (this *defChannel) Close() {
 	this.closeOnce.Do(func() {
+		logrus.Infof("close channel: %s", this.RemoteAddr())
 		this.handler.OnClose(this)
-
 		if this.onCloseFn != nil {
 			this.onCloseFn(this)
 		}
+		_ = this.conn.Close()
 		close(this.closeChan)
 	})
 }
@@ -136,13 +151,16 @@ func (this *defChannel) closeUnWriteMessageChan() {
 		case <-time.After(time.Second):
 			return
 		case msg := <-this.sendChan:
-			msg.result <- ErrClosed
+			msg.result <- &RemotingError{Op: ErrClosed, Err: errors.New("the channel is closed")}
 		}
 	}
 }
 
 func (this *defChannel) writeLoop() {
-	defer this.closeUnWriteMessageChan()
+	defer func() {
+		this.closeUnWriteMessageChan()
+		this.Close()
+	}()
 
 	for {
 		select {
@@ -150,7 +168,7 @@ func (this *defChannel) writeLoop() {
 			return
 		case msg := <-this.sendChan:
 			if msg.timeout.Before(time.Now()) {
-				msg.result <- ErrSendTimeout
+				msg.result <- &RemotingError{Op: ErrSendTimeout, Err: errors.New("send timeout")}
 			} else if _, err := this.conn.Write(msg.msg); err != nil {
 				msg.result <- err
 			} else {
@@ -161,10 +179,7 @@ func (this *defChannel) writeLoop() {
 }
 
 func (this *defChannel) readLoop() {
-	defer func() {
-		_ = this.conn.Close()
-		this.Close()
-	}()
+	defer this.Close()
 
 	for {
 		select {
@@ -200,15 +215,17 @@ func (this *defChannel) decoderMessage(conn *net.TCPConn) (msg interface{}, err 
 		if e := recover(); e != nil {
 			err = commons.Catch(e)
 			if !this.isClosed(err) {
-				this.handler.OnError(this, ErrDecoder, err)
+				this.handler.OnError(this, &RemotingError{Op: ErrDecoder, Err: err}, nil)
 			}
 		}
 	}()
 
 	_ = this.conn.SetReadDeadline(time.Now().Add(time.Second))
 	msg, err = this.coder.Decode(this, conn)
-	if err.Error() == "A zero value for t means I/O operations will not time out." {
-		err = nil
+	if err != nil {
+		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			err = nil
+		}
 	}
 	return
 }
@@ -222,8 +239,11 @@ func (c *defChannel) isClosed(err error) bool {
 	return false
 }
 
+func (this *defChannel) heartbeatTimeout() time.Duration {
+	return time.Second * time.Duration(this.config.IdleTime)
+}
 func (this *defChannel) resetReadIdle() {
-	this.idleTimer.Reset(time.Millisecond * time.Duration(this.config.IdleTime))
+	this.idleTimer.Reset(this.heartbeatTimeout())
 	this.idleTimeout = 0
 }
 
@@ -231,23 +251,22 @@ func (this *defChannel) heartbeatLoop() {
 	logrus.Debug("start heartbeat loop:", this.RemoteAddr())
 	defer func() {
 		this.idleTimer.Stop()
-		logrus.Info("close heartbeat:", this.RemoteAddr())
 		this.Close()
 	}()
-
-	idleCheckTime := time.Millisecond * time.Duration(this.config.IdleTime)
+	idleCheckTime := this.heartbeatTimeout()
 	for {
 		select {
 		case <-this.closeChan:
 			return
-		case <-this.idleTimer.C:
+		case t := <-this.idleTimer.C:
+			timestr := t.Format("2006-01-02 15:04:05")
+			logrus.Infof("send idle to: %s, time: %s", this.RemoteAddr(), timestr)
 			if this.idleTimeout+1 <= this.config.IdleTimeout {
 				this.idleTimeout = this.idleTimeout + 1
-				logrus.Debug("send idle ", this.RemoteAddr(), ", time:", this.idleTimeout)
 				this.idleTimer.Reset(idleCheckTime)
 				this.handler.OnIdle(this)
 			} else {
-				logrus.Info("IdleTimerOut: ", this.RemoteAddr())
+				logrus.Infof("IdleTimerOut: %s, %s", this.RemoteAddr(), timestr)
 				return
 			}
 		}
@@ -274,7 +293,7 @@ func NewChannel(conn *net.TCPConn, config *RemotingConfig) *defChannel {
 		closeOnce:  &sync.Once{},
 		sendChan:   make(chan sendMessage, config.SendLimit),
 	}
-	channel.idleTimer = time.NewTimer(time.Millisecond * time.Duration(config.IdleTime))
+	channel.idleTimer = time.NewTimer(channel.heartbeatTimeout())
 	channel.idleTimeout = 0
 	return channel
 }
