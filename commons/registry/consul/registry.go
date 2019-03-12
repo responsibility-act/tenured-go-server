@@ -78,7 +78,7 @@ func (this *ConsulServiceRegistry) loadHealth(serverName string) {
 		default:
 			services, metainfo, err := this.client.Health().Service(serverName, "", false, &api.QueryOptions{
 				WaitIndex: waitIndex, // 同步点，这个调用将一直阻塞，直到有新的更新,
-				WaitTime:  waitTime,  //或者有等候时间到
+				WaitTime:  waitTime,  //此次请求等待时间，此处设置防止携程阻死
 				//UseCache:  true,
 			})
 			if err != nil || waitIndex == metainfo.LastIndex {
