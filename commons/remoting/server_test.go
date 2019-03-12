@@ -21,7 +21,7 @@ func TestNewRemotingServer(t *testing.T) {
 
 	_ = server.SendTo("127.0.0.1:8080", []byte("123123"), time.Second)
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Hour)
 
 	server.Shutdown()
 }
