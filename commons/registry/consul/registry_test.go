@@ -3,6 +3,7 @@ package consul
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -18,7 +19,11 @@ type NLister struct {
 }
 
 func (this *NLister) OnNotify(status registry.RegistionStatus, serverInstances []registry.ServerInstance) {
-	//logrus.Debug(status)
+	if status == registry.UNREGISTER {
+		logrus.Info("OnNotify deregister: ", serverInstances)
+	} else {
+		logrus.Info("OnNotify register  : ", serverInstances)
+	}
 }
 
 func TestConsulServiceRegistry_Register(t *testing.T) {
@@ -45,7 +50,6 @@ func TestConsulServiceRegistry_Register(t *testing.T) {
 	}
 	time.Sleep(time.Second * 5)
 
-	t.Log("服务下线....")
 	err = sr.Unregister(si.Id)
 
 	time.Sleep(time.Second * 5)

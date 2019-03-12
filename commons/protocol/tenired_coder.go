@@ -16,7 +16,7 @@ type tenuredCoder struct {
 	config *remoting.RemotingConfig
 }
 
-func (this *tenuredCoder) Decode(reader io.Reader) (interface{}, error) {
+func (this *tenuredCoder) Decode(channel remoting.RemotingChannel, reader io.Reader) (interface{}, error) {
 	command := &TenuredCommand{}
 	length := uint32(0)
 	//length
@@ -58,7 +58,7 @@ func (this *tenuredCoder) Decode(reader io.Reader) (interface{}, error) {
 	return command, nil
 }
 
-func (this *tenuredCoder) Encode(msg interface{}) ([]byte, error) {
+func (this *tenuredCoder) Encode(channel remoting.RemotingChannel, msg interface{}) ([]byte, error) {
 	if bs, ok := msg.(*TenuredCommand); ok {
 		return this.encodeCommand(bs)
 	} else {
@@ -83,7 +83,7 @@ func (this *tenuredCoder) encodeCommand(msg *TenuredCommand) ([]byte, error) {
 			Err: errors.New("the packet limit size " + strconv.Itoa(this.config.PacketBytesLimit))}
 	}
 
-	bs := make([]byte, length)
+	bs := [length]byte{}
 	endian.PutUint32(bs, length)       //4
 	endian.PutUint32(bs[4:], msg.Id)   //4
 	endian.PutUint16(bs[8:], msg.Code) //2

@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"reflect"
 	"strconv"
@@ -30,6 +31,10 @@ type ServerInstance struct {
 
 	//当前状态,OK:正常状态，其他均为失败
 	Status string
+}
+
+func (this ServerInstance) String() string {
+	return fmt.Sprintf("[%s] %s(%s) %s", this.Status, this.Name, this.Address, this.Id)
 }
 
 func LoadModel(obj interface{}, m map[string]string) {
