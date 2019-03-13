@@ -2,6 +2,9 @@ package atomic
 
 import "sync/atomic"
 
+//TODO 修改这里的实现，
+//type AtomicUInt32 uint32
+
 type AtomicUInt32 struct {
 	value uint32
 }
@@ -54,4 +57,8 @@ func (self *AtomicUInt32) Set(i int) {
 
 func (self *AtomicUInt32) CompareAndSet(expect int, update int) bool {
 	return atomic.CompareAndSwapUint32(&self.value, uint32(expect), uint32(update))
+}
+
+func NewUint32(initValue uint32) *AtomicUInt32 {
+	return &AtomicUInt32{value: initValue}
 }

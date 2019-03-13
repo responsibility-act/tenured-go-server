@@ -13,11 +13,11 @@ func TestTenuredCoder(t *testing.T) {
 	request := NewRequest(1)
 	_ = request.SetHeader(map[string]string{"name": "value"})
 	request.Body = []byte("testbody")
-	bs, err := c.Encode(request)
+	bs, err := c.Encode(nil, request)
 	assert.Nil(t, err)
 
 	reader := bytes.NewReader(bs)
-	d1, err := c.Decode(reader)
+	d1, err := c.Decode(nil, reader)
 	assert.Nil(t, err)
 
 	decodeReq := d1.(*TenuredCommand)

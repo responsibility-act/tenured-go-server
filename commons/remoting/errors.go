@@ -6,6 +6,10 @@ import (
 
 type ErrorType string
 
+func (this ErrorType) String() string {
+	return string(this)
+}
+
 const (
 	ErrCoder   = ErrorType("Coder")
 	ErrEncoder = ErrorType("Encoder")
@@ -27,4 +31,15 @@ type RemotingError struct {
 
 func (this *RemotingError) Error() string {
 	return fmt.Sprintf("[%s]%s", this.Op, this.Err.Error())
+}
+
+func IsRemotingError(err error, types ...ErrorType) bool {
+	if e, is := err.(*RemotingError); is {
+		for _, t := range types {
+			if t == e.Op {
+				return true
+			}
+		}
+	}
+	return false
 }

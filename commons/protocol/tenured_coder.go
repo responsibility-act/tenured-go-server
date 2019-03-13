@@ -83,7 +83,7 @@ func (this *tenuredCoder) encodeCommand(msg *TenuredCommand) ([]byte, error) {
 			Err: errors.New("the packet limit size " + strconv.Itoa(this.config.PacketBytesLimit))}
 	}
 
-	bs := [length]byte{}
+	bs := make([]byte, length)
 	endian.PutUint32(bs, length)       //4
 	endian.PutUint32(bs[4:], msg.Id)   //4
 	endian.PutUint16(bs[8:], msg.Code) //2

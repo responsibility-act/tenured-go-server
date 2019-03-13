@@ -7,11 +7,13 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/atomic"
 )
 
-const ACK = 010
-const ONEWAY = 001
+const FLAG_ACK = 010
+const FLAG_ONEWAY = 001
 
-const NO_HEADER = commons.Error("NoHeader")
-const SUCCESS = 0
+const RESPONSE_SUCCESS = 0
+const REQUEST_CODE_IDLE = uint16(0)
+
+const ErrNoHeader = commons.Error("NoHeader")
 
 var atomicId atomic.AtomicUInt32
 
@@ -29,7 +31,7 @@ type TenuredCommand struct {
 	//当前消息版本号，用户兼容相同消息的不同的版本(预留了255个可升级)
 	Version uint8
 
-	//第一位标识是否是请求，0=请求，1=ACK。第二位：0:不是，1：单向通知，不需要回复
+	//第一位标识是否是请求，0=请求，1=FLAG_ACK。第二位：0:不是，1：单向通知，不需要回复
 	Flag int
 
 	//	消息内容header，此处内容用户出消息头的传递。可以为空
@@ -44,29 +46,29 @@ func (this *TenuredCommand) String() string {
 }
 
 func (this *TenuredCommand) IsSuccess() bool {
-	return this.Code == SUCCESS
+	return this.Code == RESPONSE_SUCCESS
 }
 func (this *TenuredCommand) IsACK() bool {
-	return (this.Flag & ACK) == ACK
+	return (this.Flag & FLAG_ACK) == FLAG_ACK
 }
 
 func (this *TenuredCommand) IsOneway() bool {
-	return (this.Flag & ONEWAY) == ONEWAY
+	return (this.Flag & FLAG_ONEWAY) == FLAG_ONEWAY
 }
 
 func (this *TenuredCommand) MakeACK() *TenuredCommand {
-	this.Flag = this.Flag | ACK
+	this.Flag = this.Flag | FLAG_ACK
 	return this
 }
 
 func (this *TenuredCommand) MakeOneway() *TenuredCommand {
-	this.Flag = this.Flag | ONEWAY
+	this.Flag = this.Flag | FLAG_ONEWAY
 	return this
 }
 
 func (this *TenuredCommand) SetHeader(header interface{}) error {
 	if header == nil {
-		return NO_HEADER
+		return ErrNoHeader
 	}
 	if bs, err := json.Marshal(header); err != nil {
 		return err
@@ -78,7 +80,7 @@ func (this *TenuredCommand) SetHeader(header interface{}) error {
 
 func (this *TenuredCommand) GetHeader(header interface{}) error {
 	if header == nil {
-		return NO_HEADER
+		return ErrNoHeader
 	}
 	return json.Unmarshal(this.Header, header)
 }
@@ -114,7 +116,11 @@ func NewRequest(code uint16) *TenuredCommand {
 func NewACK(id uint32) *TenuredCommand {
 	rc := &TenuredCommand{}
 	rc.Id = id
-	rc.Code = SUCCESS
+	rc.Code = RESPONSE_SUCCESS
 	rc.MakeACK()
 	return rc
+}
+
+func NewIdle() *TenuredCommand {
+	return NewRequest(REQUEST_CODE_IDLE)
 }
