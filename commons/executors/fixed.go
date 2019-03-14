@@ -2,10 +2,8 @@ package executors
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
-	at "github.com/ihaiker/tenured-go-server/commons/atomic"
 	"github.com/ihaiker/tenured-go-server/commons/future"
 	"sync"
-	"time"
 )
 
 type queueBucket struct {
@@ -16,9 +14,9 @@ type queueBucket struct {
 type fixedExecutorService struct {
 	queue     chan *queueBucket
 	waitGroup *sync.WaitGroup
-	size      *at.AtomicUInt32
-
-	closeChan chan bool
+	size      int
+	interrupt bool
+	closeChan chan struct{} /*interrupt*/
 	status    commons.ServerStatus
 }
 
@@ -45,13 +43,18 @@ func (this *fixedExecutorService) Submit(fn func() interface{}) future.Future {
 	return fu
 }
 
-func (this *fixedExecutorService) InvokeAll(fn ...func() interface{}) []future.SetFuture {
-	return nil
+func (this *fixedExecutorService) InvokeAll(fn ...func() interface{}) []future.Future {
+	all := make([]future.Future, len(fn))
+	for i := 0; i < len(fn); i++ {
+		all[i] = this.Submit(fn[i])
+	}
+	return all
 }
 
 func (this *fixedExecutorService) Shutdown(interrupt bool) {
 	this.status.Shutdown(func() {
-		this.closeChan <- interrupt
+		this.interrupt = interrupt
+		this.close()
 	})
 	this.waitGroup.Wait()
 }
@@ -63,56 +66,60 @@ func (this *fixedExecutorService) close() {
 
 func (this *fixedExecutorService) start() {
 	this.status.Start(func() {
-		for i := 0; i < int(this.size.Get()); i++ {
+		for i := 0; i < this.size; i++ {
 			this.waitGroup.Add(1)
 			go this.run(i)
 		}
 	})
 }
 
-func (this *fixedExecutorService) run(i int) {
+func execFn(qb *queueBucket) {
 	defer func() {
-		this.close()
-		this.waitGroup.Done()
+		if e := recover(); e != nil {
+			err := commons.Catch(e)
+			if qb.fu != nil {
+				qb.fu.Exception(err)
+			}
+		}
 	}()
+
+	if out := qb.fn(); qb.fu != nil {
+		qb.fu.Set(out)
+	}
+}
+
+func (this *fixedExecutorService) run(i int) {
+	defer this.waitGroup.Done()
 
 LOOP:
 	for {
 		select {
-		case interrupt := <-this.closeChan:
-			if interrupt {
+		case <-this.closeChan:
+			if this.interrupt {
 				return
 			} else {
 				break LOOP
 			}
 		case queueZone := <-this.queue:
-			out := queueZone.fn()
-			if queueZone.fu != nil {
-				queueZone.fu.Set(out)
+			if queueZone != nil {
+				execFn(queueZone)
 			}
 		}
 	}
 
 	for {
-		select {
-		case <-time.After(time.Millisecond * 500):
+		if queueZone := <-this.queue; queueZone == nil {
 			return
-		case queueZone := <-this.queue:
-			if queueZone == nil {
-				return
-			}
-			out := queueZone.fn()
-			if queueZone.fu != nil {
-				queueZone.fu.Set(out)
-			}
+		} else {
+			execFn(queueZone)
 		}
 	}
 }
 
 func NewFixedExecutorService(size int, queueSize int) ExecutorService {
 	service := &fixedExecutorService{
-		size:      at.NewUint32(uint32(size)),
-		closeChan: make(chan bool),
+		size:      size,
+		closeChan: make(chan struct{}),
 		waitGroup: &sync.WaitGroup{},
 		queue:     make(chan *queueBucket, queueSize),
 		status:    commons.S_STATUS_INIT,

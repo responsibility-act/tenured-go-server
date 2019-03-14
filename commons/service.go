@@ -14,7 +14,7 @@ const (
 
 type Service interface {
 	Start() error
-	Shutdown()
+	Shutdown() //TODO 修改这里的内容，添加interrepted
 }
 
 type ServerStatus uint32

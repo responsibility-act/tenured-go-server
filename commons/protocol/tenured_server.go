@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"errors"
+	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/future"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/sirupsen/logrus"
@@ -15,9 +16,14 @@ const (
 	S_CLOSED = uint32(1)
 )
 
+type responseTableBlock struct {
+	address string
+	future  *future.SetFuture
+}
+
 type TenuredServer struct {
 	server           *remoting.RemotingServer
-	responseTables   map[uint32]*future.SetFuture
+	responseTables   map[uint32]*responseTableBlock
 	commandProcesser map[uint16]*tenuredCommandRunner
 	*remoting.HandlerWrapper
 
@@ -34,7 +40,7 @@ func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeo
 	}
 	requestId := command.Id
 	responseFuture := future.Set()
-	this.responseTables[requestId] = responseFuture
+	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
 
 	if err := this.server.SendTo(channel, command, timeout); err != nil {
 		logrus.Debug("send %d error:", requestId, err)
@@ -62,7 +68,7 @@ func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, 
 	}
 	requestId := command.Id
 	responseFuture := future.Set()
-	this.responseTables[requestId] = responseFuture
+	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
 
 	this.server.SyncSendTo(channel, command, timeout, func(err error) {
 		if err != nil {
@@ -91,10 +97,8 @@ func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, 
 	}()
 }
 
-func (this *TenuredServer) RegisterCommandProcesser(code uint16, processer TenuredCommandProcesser, poolSize int) {
-	this.commandProcesser[code] = &tenuredCommandRunner{
-		process: processer, poolSize: poolSize,
-	}
+func (this *TenuredServer) RegisterCommandProcesser(code uint16, processer TenuredCommandProcesser, executorService executors.ExecutorService) {
+	this.commandProcesser[code] = &tenuredCommandRunner{process: processer, executorService: executorService}
 }
 
 func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *TenuredCommand) {
@@ -119,12 +123,11 @@ func (this *TenuredServer) OnMessage(channel remoting.RemotingChannel, msg inter
 	if command.IsACK() {
 		requestId := command.Id
 		if f, has := this.responseTables[requestId]; has {
-			f.Set(command)
+			f.future.Set(command)
 		}
 		return
 	} else {
-		//TODO 用管理优化
-		go this.onCommandProcesser(channel, command)
+		this.onCommandProcesser(channel, command)
 	}
 }
 
@@ -143,7 +146,11 @@ func (this *TenuredServer) OnClose(channel remoting.RemotingChannel) {
 }
 
 func (this *TenuredServer) fastFailChannel(channel remoting.RemotingChannel) {
-	//TODO 去除有的消息等待
+	for _, v := range this.responseTables {
+		if v.address == channel.RemoteAddr() {
+			v.future.Exception(errors.New(remoting.ErrClosed.String()))
+		}
+	}
 }
 
 func (this *TenuredServer) Start() error {
@@ -153,7 +160,7 @@ func (this *TenuredServer) Start() error {
 func (this *TenuredServer) waitRequest(interrupt bool) {
 	if interrupt {
 		for _, v := range this.responseTables {
-			v.Exception(errors.New(remoting.ErrClosed.String()))
+			v.future.Exception(errors.New(remoting.ErrClosed.String()))
 		}
 	} else {
 		for {
@@ -186,7 +193,7 @@ func NewTenuredServer(address string, config *remoting.RemotingConfig) (*Tenured
 		remotingServer.SetCoder(&tenuredCoder{config: config})
 		server := &TenuredServer{
 			server:           remotingServer,
-			responseTables:   map[uint32]*future.SetFuture{},
+			responseTables:   map[uint32]*responseTableBlock{},
 			commandProcesser: map[uint16]*tenuredCommandRunner{},
 		}
 		remotingServer.SetHandler(server)

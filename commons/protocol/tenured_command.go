@@ -18,7 +18,7 @@ const ErrNoHeader = commons.Error("NoHeader")
 var atomicId atomic.AtomicUInt32
 
 func init() {
-	atomicId = atomic.AtomicUInt32{}
+	atomicId = atomic.AtomicUInt32(0)
 }
 
 type TenuredCommand struct {

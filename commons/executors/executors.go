@@ -13,7 +13,8 @@ type ExecutorService interface {
 	Execute(fn func()) error
 
 	Submit(fn func() interface{}) future.Future
-	InvokeAll(fn ...func() interface{}) []future.SetFuture
+
+	InvokeAll(fn ...func() interface{}) []future.Future
 
 	Shutdown(interrupt bool)
 }
