@@ -1,6 +1,7 @@
 package remoting
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons"
 	"net"
 	"sync"
 	"time"
@@ -52,11 +53,11 @@ func NewClient(config *RemotingConfig) *RemotingClient {
 	client := &RemotingClient{
 		lock: &sync.Mutex{},
 		Remoting: Remoting{
-			config:      config,
-			channels:    make(map[string]RemotingChannel),
-			exitChan:    make(chan struct{}),
-			exitChanOne: &sync.Once{},
-			waitGroup:   &sync.WaitGroup{},
+			config:    config,
+			channels:  make(map[string]RemotingChannel),
+			exitChan:  make(chan struct{}),
+			status:    commons.S_STATUS_INIT,
+			waitGroup: &sync.WaitGroup{},
 		},
 	}
 	return client

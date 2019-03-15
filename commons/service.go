@@ -3,8 +3,8 @@ package commons
 import "sync/atomic"
 
 const (
-	S_STATUS_INIT       ServerStatus = iota //服务初始化过程中
-	S_STATUS_STARTING                       //服务正在启动中
+	S_STATUS_INIT       ServerStatus = 0    //服务初始化过程中
+	S_STATUS_STARTING                = iota //服务正在启动中
 	S_STATUS_SUSPEND                        //服务暂停中
 	S_STATUS_RESTARTING                     //服务正在重启中
 	S_STATUS_UP                             //服务已经正常运行
@@ -14,7 +14,7 @@ const (
 
 type Service interface {
 	Start() error
-	Shutdown() //TODO 修改这里的内容，添加interrepted
+	Shutdown(interrupt bool)
 }
 
 type ServerStatus uint32

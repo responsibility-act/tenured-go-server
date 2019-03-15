@@ -2,6 +2,7 @@ package remoting
 
 import (
 	"errors"
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -12,8 +13,8 @@ type Remoting struct {
 	config   *RemotingConfig
 	channels map[string]RemotingChannel
 
-	exitChanOne *sync.Once
-	exitChan    chan struct{} // notify all goroutines to shutdown
+	status   commons.ServerStatus
+	exitChan chan struct{} // notify all goroutines to shutdown
 
 	waitGroup      *sync.WaitGroup // wait for all goroutines
 	coderFactory   RemotingCoderFactory
@@ -50,7 +51,12 @@ func (this *Remoting) Start() error {
 		return &RemotingError{Op: ErrHandler, Err: errors.New("no handler")}
 	}
 	this.channelSelector = this.getChannel
-	return nil
+
+	if started := this.status.Start(func() {}); started {
+		return nil
+	} else {
+		return errors.New("start unknow error!")
+	}
 }
 
 func (this *Remoting) SendTo(address string, msg interface{}, timeout time.Duration) error {
@@ -104,6 +110,10 @@ func (this *Remoting) newChannel(address string, conn *net.TCPConn) RemotingChan
 	return channel
 }
 
+func (this *Remoting) GetStatus() commons.ServerStatus {
+	return this.status
+}
+
 func (this *Remoting) closeChannels() {
 	for _, v := range this.channels {
 		if v != nil {
@@ -112,8 +122,8 @@ func (this *Remoting) closeChannels() {
 	}
 }
 
-func (this *Remoting) Shutdown() {
-	this.exitChanOne.Do(func() {
+func (this *Remoting) Shutdown(interrupt bool) {
+	this.status.Shutdown(func() {
 		this.waitGroup.Add(1)
 		logrus.Infof("turn off remoting")
 		close(this.exitChan)

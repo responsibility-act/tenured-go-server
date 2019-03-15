@@ -7,13 +7,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/sirupsen/logrus"
 	"reflect"
-	"sync/atomic"
 	"time"
-)
-
-const (
-	S_RUNING = uint32(0)
-	S_CLOSED = uint32(1)
 )
 
 type responseTableBlock struct {
@@ -30,12 +24,8 @@ type TenuredServer struct {
 	closeStatus uint32
 }
 
-func (this *TenuredServer) IsActive() bool {
-	return atomic.LoadUint32(&this.closeStatus) == S_RUNING
-}
-
 func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
-	if !this.IsActive() {
+	if !this.server.GetStatus().IsUp() {
 		return nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"}
 	}
 	requestId := command.Id
@@ -62,7 +52,7 @@ func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeo
 
 func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, timeout time.Duration,
 	callback func(tenuredCommand *TenuredCommand, err error)) {
-	if !this.IsActive() {
+	if !this.server.GetStatus().IsUp() {
 		callback(nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"})
 		return
 	}
@@ -172,18 +162,8 @@ func (this *TenuredServer) waitRequest(interrupt bool) {
 	}
 }
 
-func (this *TenuredServer) Shutdown() {
-	this.server.Shutdown()
-	if atomic.CompareAndSwapUint32(&this.closeStatus, S_RUNING, S_CLOSED) {
-		this.waitRequest(false)
-	}
-}
-
-func (this *TenuredServer) InterruptShutdown() {
-	this.server.Shutdown()
-	if atomic.CompareAndSwapUint32(&this.closeStatus, S_RUNING, S_CLOSED) {
-		this.waitRequest(true)
-	}
+func (this *TenuredServer) Shutdown(interrupt bool) {
+	this.server.Shutdown(interrupt)
 }
 
 func NewTenuredServer(address string, config *remoting.RemotingConfig) (*TenuredServer, error) {

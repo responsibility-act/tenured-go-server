@@ -31,7 +31,7 @@ func (this *ConsulServiceRegistry) Start() error {
 	return nil
 }
 
-func (this *ConsulServiceRegistry) Shutdown() {
+func (this *ConsulServiceRegistry) Shutdown(interrupt bool) {
 	for name, ch := range this.subscribes {
 		ch.close()
 		delete(this.subscribes, name)
@@ -39,7 +39,7 @@ func (this *ConsulServiceRegistry) Shutdown() {
 }
 
 func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstance) error {
-	logrus.Infof("register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
+	logrus.Infof("To register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
 	attrs := serverInstance.PluginAttrs.(*ConsulServerAttrs)
 	if host, portStr, err := net.SplitHostPort(serverInstance.Address); err != nil {
 		return err
@@ -47,8 +47,8 @@ func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstan
 		return err
 	} else {
 		check := &api.AgentServiceCheck{ // 健康检查
-			Interval:                       attrs.Interval,
-			Timeout:                        attrs.RequestTimeout,
+			Interval: attrs.Interval,
+			Timeout:  attrs.RequestTimeout,
 			DeregisterCriticalServiceAfter: attrs.Deregister,
 		}
 		switch attrs.CheckType {
@@ -70,7 +70,7 @@ func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstan
 }
 
 func (this *ConsulServiceRegistry) Unregister(serverId string) error {
-	logrus.Info("Unregister ", serverId)
+	logrus.Info("To Unregister ", serverId)
 	return this.client.Agent().ServiceDeregister(serverId)
 }
 

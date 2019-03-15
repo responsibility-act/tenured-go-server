@@ -1,6 +1,7 @@
 package remoting
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -31,7 +32,7 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 	defer func() {
 		_ = listener.Close()
 		this.waitGroup.Done()
-		this.Shutdown()
+		this.Shutdown(false)
 	}()
 	logrus.Infof("server startup：%s", listener.Addr().String())
 
@@ -63,11 +64,11 @@ func NewRemotingServer(address string, config *RemotingConfig) (*RemotingServer,
 	server := &RemotingServer{
 		address: address,
 		Remoting: Remoting{
-			config:      config,
-			channels:    make(map[string]RemotingChannel),
-			exitChan:    make(chan struct{}),
-			exitChanOne: &sync.Once{},
-			waitGroup:   &sync.WaitGroup{},
+			config:    config,
+			channels:  make(map[string]RemotingChannel),
+			exitChan:  make(chan struct{}),
+			status:    commons.S_STATUS_INIT,
+			waitGroup: &sync.WaitGroup{},
 		},
 	}
 	return server, nil

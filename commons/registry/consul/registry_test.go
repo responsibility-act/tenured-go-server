@@ -53,7 +53,7 @@ func TestConsulServiceRegistry_Register(t *testing.T) {
 	err = sr.Unregister(si.Id)
 
 	time.Sleep(time.Second * 5)
-	(sr.(commons.Service)).Shutdown()
+	(sr.(commons.Service)).Shutdown(true)
 
 	assert.Nil(t, err)
 }

@@ -23,5 +23,5 @@ func TestNewRemotingServer(t *testing.T) {
 
 	time.Sleep(time.Hour)
 
-	server.Shutdown()
+	server.Shutdown(true)
 }

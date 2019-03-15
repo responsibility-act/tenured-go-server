@@ -26,7 +26,7 @@ func init() {
 func TestRemotingClient_SendTo(t *testing.T) {
 	err := client.SendTo("renzhen.la:9999", []byte("ni hao a"), time.Second*10)
 	if err == nil {
-		client.Shutdown()
+		client.Shutdown(true)
 	} else {
 		t.Log(err)
 	}
@@ -39,12 +39,12 @@ func TestRemotingClient_SyncSendTo(t *testing.T) {
 	})
 	err := <-out
 	assert.Nil(t, err)
-	client.Shutdown()
+	client.Shutdown(true)
 }
 
 func TestRemotingClient_SendTo_Error(t *testing.T) {
 	err := client.SendTo("renzhen.la:9090", []byte("ni hao a"), time.Second)
 	assert.NotNil(t, err)
 	t.Log(err)
-	client.Shutdown()
+	client.Shutdown(true)
 }

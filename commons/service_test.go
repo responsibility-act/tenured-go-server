@@ -22,5 +22,15 @@ func TestServerStatus(t *testing.T) {
 	})
 	assert.Equal(t, status, S_STATUS_UP)
 
+	b = status.Shutdown(func() {
+		t.Log("shutdown do...")
+	})
+	assert.True(t, b)
+
+	b = status.Shutdown(func() {
+		t.Log("no do...")
+	})
+	assert.False(t, b)
+
 	t.Log(status)
 }
