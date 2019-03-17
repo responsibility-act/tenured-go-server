@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+type Hock int
+
+const (
+	HOCK_START_BEFORE Hock = iota
+	HOCK_START_AFTER
+
+	HOCK_SHUTDOWN_BEFORE
+	HOCK_SHUTDOWN_AFTER
+)
+
 type Remoting struct {
 	config   *RemotingConfig
 	channels map[string]RemotingChannel
@@ -20,6 +30,7 @@ type Remoting struct {
 	coderFactory   RemotingCoderFactory
 	handlerFactory RemotingHandlerFactory
 
+	hocks           map[Hock]func()
 	channelSelector func(address string, timeout time.Duration) (RemotingChannel, error)
 }
 
@@ -43,6 +54,10 @@ func (this *Remoting) SetHandler(handler RemotingHandler) {
 	})
 }
 
+func (this *Remoting) RegisterHock(hock Hock, fn func()) {
+	this.hocks[hock] = fn
+}
+
 func (this *Remoting) Start() error {
 	if this.coderFactory == nil {
 		return &RemotingError{Op: ErrCoder, Err: errors.New("no coder")}
@@ -52,7 +67,13 @@ func (this *Remoting) Start() error {
 	}
 	this.channelSelector = this.getChannel
 
+	if hock, has := this.hocks[HOCK_START_BEFORE]; has {
+		hock()
+	}
 	if started := this.status.Start(func() {}); started {
+		if hock, has := this.hocks[HOCK_START_AFTER]; has {
+			hock()
+		}
 		return nil
 	} else {
 		return errors.New("start unknow error!")
@@ -110,8 +131,12 @@ func (this *Remoting) newChannel(address string, conn *net.TCPConn) RemotingChan
 	return channel
 }
 
-func (this *Remoting) GetStatus() commons.ServerStatus {
-	return this.status
+func (this *Remoting) IsActive() bool {
+	return this.status.IsUp()
+}
+
+func (this *Remoting) IsStatus(status commons.ServerStatus) bool {
+	return this.status.Is(status)
 }
 
 func (this *Remoting) closeChannels() {
@@ -126,7 +151,13 @@ func (this *Remoting) Shutdown(interrupt bool) {
 	this.status.Shutdown(func() {
 		this.waitGroup.Add(1)
 		logrus.Infof("turn off remoting")
+		if hock, has := this.hocks[HOCK_SHUTDOWN_BEFORE]; has {
+			hock()
+		}
 		close(this.exitChan)
+		if hock, has := this.hocks[HOCK_SHUTDOWN_AFTER]; has {
+			hock()
+		}
 		this.closeChannels()
 		logrus.Infof("remoting has stopped.")
 		this.waitGroup.Done()

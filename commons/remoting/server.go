@@ -69,6 +69,7 @@ func NewRemotingServer(address string, config *RemotingConfig) (*RemotingServer,
 			exitChan:  make(chan struct{}),
 			status:    commons.S_STATUS_INIT,
 			waitGroup: &sync.WaitGroup{},
+			hocks:     map[Hock]func(){},
 		},
 	}
 	return server, nil

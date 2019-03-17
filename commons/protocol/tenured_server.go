@@ -21,11 +21,12 @@ type TenuredServer struct {
 	commandProcesser map[uint16]*tenuredCommandRunner
 	*remoting.HandlerWrapper
 
+	AuthChecker TenuredAuthChecker
 	closeStatus uint32
 }
 
 func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
-	if !this.server.GetStatus().IsUp() {
+	if !this.server.IsActive() {
 		return nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"}
 	}
 	requestId := command.Id
@@ -52,7 +53,8 @@ func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeo
 
 func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, timeout time.Duration,
 	callback func(tenuredCommand *TenuredCommand, err error)) {
-	if !this.server.GetStatus().IsUp() {
+
+	if !this.server.IsActive() {
 		callback(nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"})
 		return
 	}
@@ -91,8 +93,11 @@ func (this *TenuredServer) RegisterCommandProcesser(code uint16, processer Tenur
 	this.commandProcesser[code] = &tenuredCommandRunner{process: processer, executorService: executorService}
 }
 
-func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *TenuredCommand) {
+func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *TenuredCommand, err *TenuredError) {
 	response := NewACK(command.Id)
+	if err != nil {
+		response.RemotingError(*err)
+	}
 	if err := channel.Write(response, time.Second*7); err != nil {
 		if remoting.IsRemotingError(err, remoting.ErrClosed) {
 			return
@@ -102,9 +107,23 @@ func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *Te
 }
 
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
-	this.makeAck(channel, command)
+	if command.Code == REQUEST_CODE_ATUH {
+		if err := this.AuthChecker.Auth(channel, command); err != nil {
+			logrus.Info("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
+			this.makeAck(channel, command, ErrorInvalidAuth())
+		} else {
+			logrus.Infof("channel(%s) auth success", channel.RemoteAddr())
+			this.makeAck(channel, command, nil)
+		}
+		return
+	} else if !this.AuthChecker.IsAuthed(channel) {
+		this.makeAck(channel, command, ErrorNoAuth())
+		this.fastFailChannel(channel)
+		return
+	}
+
 	if processRunner, has := this.commandProcesser[command.Code]; has {
-		processRunner.onCommand(channel, command)
+		processRunner.onCommand(this, channel, command)
 	}
 }
 
@@ -141,6 +160,7 @@ func (this *TenuredServer) fastFailChannel(channel remoting.RemotingChannel) {
 			v.future.Exception(errors.New(remoting.ErrClosed.String()))
 		}
 	}
+	channel.Close()
 }
 
 func (this *TenuredServer) Start() error {
@@ -163,6 +183,9 @@ func (this *TenuredServer) waitRequest(interrupt bool) {
 }
 
 func (this *TenuredServer) Shutdown(interrupt bool) {
+	this.server.RegisterHock(remoting.HOCK_SHUTDOWN_AFTER, func() {
+		this.waitRequest(interrupt)
+	})
 	this.server.Shutdown(interrupt)
 }
 
@@ -175,6 +198,7 @@ func NewTenuredServer(address string, config *remoting.RemotingConfig) (*Tenured
 			server:           remotingServer,
 			responseTables:   map[uint32]*responseTableBlock{},
 			commandProcesser: map[uint16]*tenuredCommandRunner{},
+			AuthChecker:      &defAuthChecker{},
 		}
 		remotingServer.SetHandler(server)
 		return server, nil

@@ -12,6 +12,7 @@ const FLAG_ONEWAY = 001
 
 const RESPONSE_SUCCESS = 0
 const REQUEST_CODE_IDLE = uint16(0)
+const REQUEST_CODE_ATUH = uint16(1)
 
 const ErrNoHeader = commons.Error("NoHeader")
 

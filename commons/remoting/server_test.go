@@ -19,9 +19,8 @@ func TestNewRemotingServer(t *testing.T) {
 	err = server.Start()
 	assert.Nil(t, err)
 
-	_ = server.SendTo("127.0.0.1:8080", []byte("123123"), time.Second)
-
-	time.Sleep(time.Hour)
+	err = server.SendTo("127.0.0.1:8080", []byte("123123"), time.Second)
+	t.Log("sendto 127.0.0.1:8080", err)
 
 	server.Shutdown(true)
 }

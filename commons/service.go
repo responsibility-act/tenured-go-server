@@ -3,13 +3,13 @@ package commons
 import "sync/atomic"
 
 const (
-	S_STATUS_INIT       ServerStatus = 0    //服务初始化过程中
-	S_STATUS_STARTING                = iota //服务正在启动中
-	S_STATUS_SUSPEND                        //服务暂停中
-	S_STATUS_RESTARTING                     //服务正在重启中
-	S_STATUS_UP                             //服务已经正常运行
-	S_STATUS_STOPING                        //服务正在停止
-	S_STATUS_DOWN                           //服务已经停止
+	S_STATUS_INIT       ServerStatus = 0 //服务初始化过程中
+	S_STATUS_STARTING   ServerStatus = 1 //服务正在启动中
+	S_STATUS_SUSPEND    ServerStatus = 2 //服务暂停中
+	S_STATUS_RESTARTING ServerStatus = 3 //服务正在重启中
+	S_STATUS_UP         ServerStatus = 4 //服务已经正常运行
+	S_STATUS_STOPING    ServerStatus = 5 //服务正在停止
+	S_STATUS_DOWN       ServerStatus = 6 //服务已经停止
 )
 
 type Service interface {
@@ -23,12 +23,8 @@ func (this *ServerStatus) i() uint32 {
 	return atomic.LoadUint32((*uint32)(this))
 }
 
-func (this *ServerStatus) Atomic() ServerStatus {
-	return ServerStatus(this.i())
-}
-
 func (this ServerStatus) String() string {
-	switch this.Atomic() {
+	switch this {
 	case S_STATUS_INIT:
 		return "init"
 	case S_STATUS_STARTING:

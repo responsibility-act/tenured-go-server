@@ -58,6 +58,7 @@ func NewClient(config *RemotingConfig) *RemotingClient {
 			exitChan:  make(chan struct{}),
 			status:    commons.S_STATUS_INIT,
 			waitGroup: &sync.WaitGroup{},
+			hocks:     map[Hock]func(){},
 		},
 	}
 	return client
