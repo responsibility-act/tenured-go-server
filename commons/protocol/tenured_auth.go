@@ -11,10 +11,10 @@ type TenuredAuthChecker interface {
 	IsAuthed(channel remoting.RemotingChannel) bool
 }
 
-type defAuthChecker struct {
+type ModuleAuthChecker struct {
 }
 
-func (this *defAuthChecker) Auth(channel remoting.RemotingChannel, command *TenuredCommand) error {
+func (this *ModuleAuthChecker) Auth(channel remoting.RemotingChannel, command *TenuredCommand) error {
 	header := &AuthHeader{}
 	if err := command.GetHeader(header); err != nil {
 		return err
@@ -27,7 +27,7 @@ func (this *defAuthChecker) Auth(channel remoting.RemotingChannel, command *Tenu
 	return nil
 }
 
-func (this *defAuthChecker) IsAuthed(channel remoting.RemotingChannel) bool {
+func (this *ModuleAuthChecker) IsAuthed(channel remoting.RemotingChannel) bool {
 	attrs := channel.ChannelAttributes()
 	if attrs == nil {
 		return false

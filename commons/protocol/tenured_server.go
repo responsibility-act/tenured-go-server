@@ -190,15 +190,19 @@ func (this *TenuredServer) Shutdown(interrupt bool) {
 }
 
 func NewTenuredServer(address string, config *remoting.RemotingConfig) (*TenuredServer, error) {
+	if config == nil {
+		config = remoting.DefaultConfig()
+	}
 	if remotingServer, err := remoting.NewRemotingServer(address, config); err != nil {
 		return nil, err
 	} else {
 		remotingServer.SetCoder(&tenuredCoder{config: config})
+		remotingServer.SetChannelTransfer(&TenuredRemotingChannelTransfer{})
 		server := &TenuredServer{
 			server:           remotingServer,
 			responseTables:   map[uint32]*responseTableBlock{},
 			commandProcesser: map[uint16]*tenuredCommandRunner{},
-			AuthChecker:      &defAuthChecker{},
+			AuthChecker:      &ModuleAuthChecker{},
 		}
 		remotingServer.SetHandler(server)
 		return server, nil

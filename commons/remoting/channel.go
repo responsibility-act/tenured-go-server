@@ -24,6 +24,10 @@ type RemotingChannel interface {
 	Close()
 }
 
+type RemotingChannelTransfer interface {
+	Transform(RemotingChannel) RemotingChannel
+}
+
 type sendMessage struct {
 	msg     []byte
 	result  chan error
@@ -136,6 +140,7 @@ func (this *defChannel) Do(onClose func(channel RemotingChannel)) {
 func (this *defChannel) Close() {
 	this.closeOnce.Do(func() {
 		logrus.Infof("close channel: %s", this.RemoteAddr())
+		this.idleTimer.Stop()
 		this.handler.OnClose(this)
 		if this.onCloseFn != nil {
 			this.onCloseFn(this)
@@ -260,8 +265,8 @@ func (this *defChannel) heartbeatLoop() {
 			return
 		case t := <-this.idleTimer.C:
 			timestr := t.Format("2006-01-02 15:04:05")
-			logrus.Infof("send idle to: %s, time: %s", this.RemoteAddr(), timestr)
 			if this.idleTimeout+1 <= this.config.IdleTimeout {
+				logrus.Infof("SendIdle to: %s, time: %s", this.RemoteAddr(), timestr)
 				this.idleTimeout = this.idleTimeout + 1
 				this.idleTimer.Reset(idleCheckTime)
 				this.handler.OnIdle(this)
