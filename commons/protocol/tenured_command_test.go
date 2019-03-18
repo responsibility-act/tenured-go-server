@@ -9,9 +9,9 @@ func TestCommand(t *testing.T) {
 	request := NewRequest(1)
 	assert.False(t, request.IsACK())
 	assert.False(t, request.IsOneway())
-	assert.Equal(t, request.Id, uint32(1))
+	assert.Equal(t, request.id, uint32(1))
 
-	response := NewACK(request.Id)
+	response := NewACK(request.id)
 	assert.True(t, response.IsACK())
 	assert.True(t, response.IsSuccess())
 
@@ -29,7 +29,7 @@ func TestCommand(t *testing.T) {
 	t.Log(re)
 
 	req2 := NewRequest(2)
-	assert.Equal(t, req2.Id, uint32(2))
+	assert.Equal(t, req2.id, uint32(2))
 }
 
 func TestCommand_MapHeader(t *testing.T) {

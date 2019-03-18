@@ -9,11 +9,11 @@ import (
 
 type RemotingClient struct {
 	lock sync.Locker
-	Remoting
+	remotingImpl
 }
 
 func (this *RemotingClient) Start() error {
-	if err := this.Remoting.Start(); err != nil {
+	if err := this.remotingImpl.Start(); err != nil {
 		return nil
 	}
 	this.channelSelector = this.getChannel
@@ -21,7 +21,7 @@ func (this *RemotingClient) Start() error {
 }
 
 func (this *RemotingClient) getChannel(address string, timeout time.Duration) (RemotingChannel, error) {
-	if channel, err := this.Remoting.getChannel(address, timeout); err == nil {
+	if channel, err := this.remotingImpl.getChannel(address, timeout); err == nil {
 		return channel, nil
 	} else if noChannel, ok := err.(*RemotingError); ok && noChannel.Op == ErrNoChannel {
 		return this.createNewChannel(address, timeout)
@@ -41,18 +41,18 @@ func (this *RemotingClient) createNewChannel(address string, timeout time.Durati
 	if conn, err := net.DialTimeout("tcp", address, timeout); err != nil {
 		return nil, err
 	} else {
-		channel := this.newChannel(address, conn.(*net.TCPConn))
-		return channel, nil
+		channel, err := this.newChannel(address, conn.(*net.TCPConn))
+		return channel, err
 	}
 }
 
-func NewClient(config *RemotingConfig) *RemotingClient {
+func NewRemotingClient(config *RemotingConfig) *RemotingClient {
 	if config == nil {
 		config = DefaultConfig()
 	}
 	client := &RemotingClient{
 		lock: &sync.Mutex{},
-		Remoting: Remoting{
+		remotingImpl: remotingImpl{
 			config:    config,
 			channels:  make(map[string]RemotingChannel),
 			exitChan:  make(chan struct{}),

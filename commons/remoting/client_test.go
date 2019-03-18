@@ -15,7 +15,7 @@ func (h *TestHandler) OnMessage(c RemotingChannel, msg interface{}) {
 	logrus.Infof("OnMessage %s : msg:%v", c.RemoteAddr(), string(msg.([]byte)))
 }
 
-var client = NewClient(nil)
+var client = NewRemotingClient(nil)
 
 func init() {
 	client.SetHandler(&TestHandler{})

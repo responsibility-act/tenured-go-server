@@ -125,12 +125,16 @@ func (this *defChannel) AsyncWrite(msg interface{}, timeout time.Duration, callb
 	_ = this.write(msg, timeout, callback)
 }
 
-func (this *defChannel) Do(onClose func(channel RemotingChannel)) {
+func (this *defChannel) Do(onClose func(channel RemotingChannel)) error {
 	this.onCloseFn = onClose
 	go this.syncDo(this.readLoop)
 	go this.syncDo(this.heartbeatLoop)
 	go this.syncDo(this.writeLoop)
-	this.handler.OnChannel(this)
+	err := this.handler.OnChannel(this)
+	if err != nil {
+		this.Close()
+	}
+	return err
 }
 
 func (this *defChannel) Close() {

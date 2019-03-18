@@ -15,9 +15,9 @@ type tenuredCommandRunner struct {
 	executorService executors.ExecutorService
 }
 
-func (this *tenuredCommandRunner) onCommand(server *TenuredServer, channel remoting.RemotingChannel, command *TenuredCommand) {
+func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if this.process == nil {
-		logrus.Warnf("can't found command(%d) process", command.Code)
+		logrus.Warnf("can't found command(%d) process", command.code)
 		return
 	}
 

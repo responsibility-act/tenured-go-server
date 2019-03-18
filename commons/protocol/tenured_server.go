@@ -1,112 +1,17 @@
 package protocol
 
 import (
-	"errors"
-	"github.com/ihaiker/tenured-go-server/commons/executors"
-	"github.com/ihaiker/tenured-go-server/commons/future"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/sirupsen/logrus"
-	"reflect"
-	"time"
 )
 
-type responseTableBlock struct {
-	address string
-	future  *future.SetFuture
-}
-
 type TenuredServer struct {
-	server           *remoting.RemotingServer
-	responseTables   map[uint32]*responseTableBlock
-	commandProcesser map[uint16]*tenuredCommandRunner
-	*remoting.HandlerWrapper
-
+	tenuredService
 	AuthChecker TenuredAuthChecker
 }
 
-func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
-	if !this.server.IsActive() {
-		return nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"}
-	}
-	requestId := command.Id
-	responseFuture := future.Set()
-	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
-
-	if err := this.server.SendTo(channel, command, timeout); err != nil {
-		logrus.Debugf("send %d error: %v", requestId, err)
-		delete(this.responseTables, requestId)
-		return nil, err
-	} else {
-		response, err := responseFuture.GetWithTimeout(timeout)
-		delete(this.responseTables, requestId)
-		if err != nil {
-			return nil, err
-		}
-		if responseCommand, match := response.(*TenuredCommand); !match {
-			return nil, errors.New("response type error：" + reflect.TypeOf(response).Name())
-		} else {
-			return responseCommand, nil
-		}
-	}
-}
-
-func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, timeout time.Duration,
-	callback func(tenuredCommand *TenuredCommand, err error)) {
-
-	if !this.server.IsActive() {
-		callback(nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"})
-		return
-	}
-	requestId := command.Id
-	responseFuture := future.Set()
-	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
-
-	this.server.SyncSendTo(channel, command, timeout, func(err error) {
-		if err != nil {
-			logrus.Debugf("async send %d error", requestId)
-			callback(nil, err)
-			delete(this.responseTables, requestId)
-		} else {
-			logrus.Debugf("async send %d error", requestId)
-		}
-	})
-
-	go func() {
-		response, err := responseFuture.GetWithTimeout(timeout)
-		delete(this.responseTables, requestId)
-
-		if err != nil {
-			callback(nil, err)
-			return
-		}
-
-		if responseCommand, match := response.(*TenuredCommand); !match {
-			callback(nil, errors.New("response type error："+reflect.TypeOf(response).Name()))
-		} else {
-			callback(responseCommand, nil)
-		}
-	}()
-}
-
-func (this *TenuredServer) RegisterCommandProcesser(code uint16, processer TenuredCommandProcesser, executorService executors.ExecutorService) {
-	this.commandProcesser[code] = &tenuredCommandRunner{process: processer, executorService: executorService}
-}
-
-func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *TenuredCommand, err *TenuredError) {
-	response := NewACK(command.Id)
-	if err != nil {
-		response.RemotingError(*err)
-	}
-	if err := channel.Write(response, time.Second*7); err != nil {
-		if remoting.IsRemotingError(err, remoting.ErrClosed) {
-			return
-		}
-		logrus.Warnf("send ack error: %s", err.Error())
-	}
-}
-
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
-	if command.Code == REQUEST_CODE_ATUH {
+	if command.code == REQUEST_CODE_ATUH {
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
 			logrus.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
 			this.makeAck(channel, command, ErrorInvalidAuth())
@@ -121,15 +26,15 @@ func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, 
 		return
 	}
 
-	if processRunner, has := this.commandProcesser[command.Code]; has {
-		processRunner.onCommand(this, channel, command)
+	if processRunner, has := this.commandProcesser[command.code]; has {
+		processRunner.onCommand(channel, command)
 	}
 }
 
 func (this *TenuredServer) OnMessage(channel remoting.RemotingChannel, msg interface{}) {
 	command := msg.(*TenuredCommand)
 	if command.IsACK() {
-		requestId := command.Id
+		requestId := command.id
 		if f, has := this.responseTables[requestId]; has {
 			f.future.Set(command)
 		}
@@ -137,55 +42,6 @@ func (this *TenuredServer) OnMessage(channel remoting.RemotingChannel, msg inter
 	} else {
 		this.onCommandProcesser(channel, command)
 	}
-}
-
-//发送心跳包
-func (this *TenuredServer) OnIdle(channel remoting.RemotingChannel) {
-	if err := channel.Write(NewIdle(), time.Second*3); err != nil {
-		if remoting.IsRemotingError(err, remoting.ErrClosed) {
-			return
-		}
-		logrus.Warnf("send %s idle error: %v", channel.RemoteAddr(), err)
-	}
-}
-
-func (this *TenuredServer) OnClose(channel remoting.RemotingChannel) {
-	this.fastFailChannel(channel)
-}
-
-func (this *TenuredServer) fastFailChannel(channel remoting.RemotingChannel) {
-	for _, v := range this.responseTables {
-		if v.address == channel.RemoteAddr() {
-			v.future.Exception(errors.New(remoting.ErrClosed.String()))
-		}
-	}
-	channel.Close()
-}
-
-func (this *TenuredServer) Start() error {
-	return this.server.Start()
-}
-
-func (this *TenuredServer) waitRequest(interrupt bool) {
-	if interrupt {
-		for _, v := range this.responseTables {
-			v.future.Exception(errors.New(remoting.ErrClosed.String()))
-		}
-	} else {
-		for {
-			if len(this.responseTables) == 0 {
-				return
-			}
-			<-time.After(time.Millisecond * 200)
-		}
-	}
-}
-
-func (this *TenuredServer) Shutdown(interrupt bool) {
-	this.server.RegisterHock(remoting.HOCK_SHUTDOWN_AFTER, func() {
-		this.waitRequest(interrupt)
-	})
-	this.server.Shutdown(interrupt)
 }
 
 func NewTenuredServer(address string, config *remoting.RemotingConfig) (*TenuredServer, error) {
@@ -197,10 +53,12 @@ func NewTenuredServer(address string, config *remoting.RemotingConfig) (*Tenured
 	} else {
 		remotingServer.SetCoder(&tenuredCoder{config: config})
 		server := &TenuredServer{
-			server:           remotingServer,
-			responseTables:   map[uint32]*responseTableBlock{},
-			commandProcesser: map[uint16]*tenuredCommandRunner{},
-			AuthChecker:      &ModuleAuthChecker{},
+			tenuredService: tenuredService{
+				remoting:         remotingServer,
+				responseTables:   map[uint32]*responseTableBlock{},
+				commandProcesser: map[uint16]*tenuredCommandRunner{},
+			},
+			AuthChecker: &ModuleAuthChecker{},
 		}
 		remotingServer.SetHandler(server)
 		return server, nil

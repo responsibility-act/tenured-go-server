@@ -10,11 +10,11 @@ import (
 
 type RemotingServer struct {
 	address string
-	Remoting
+	remotingImpl
 }
 
 func (this *RemotingServer) Start() error {
-	if err := this.Remoting.Start(); err != nil {
+	if err := this.remotingImpl.Start(); err != nil {
 		return nil
 	}
 
@@ -53,7 +53,9 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 				}
 			}
 			address := conn.RemoteAddr().String()
-			_ = this.newChannel(address, conn)
+			if _, err = this.newChannel(address, conn); err != nil {
+				logrus.Infof("the server reject connection. %s", err.Error())
+			}
 		}
 	}
 }
@@ -63,7 +65,7 @@ func NewRemotingServer(address string, config *RemotingConfig) (*RemotingServer,
 	}
 	server := &RemotingServer{
 		address: address,
-		Remoting: Remoting{
+		remotingImpl: remotingImpl{
 			config:    config,
 			channels:  make(map[string]RemotingChannel),
 			exitChan:  make(chan struct{}),

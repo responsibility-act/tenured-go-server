@@ -5,8 +5,8 @@ import (
 )
 
 type RemotingHandler interface {
-	//链接事件，当客户端链接时调用
-	OnChannel(c RemotingChannel)
+	//链接事件，当客户端链接时调用,如果客户端返回错误，将直接关闭
+	OnChannel(c RemotingChannel) error
 
 	//新消息事件，当客户端发来新的消息时调用
 	OnMessage(c RemotingChannel, msg interface{})
@@ -26,8 +26,9 @@ type RemotingHandlerFactory func(RemotingChannel, RemotingConfig) RemotingHandle
 type HandlerWrapper struct {
 }
 
-func (h *HandlerWrapper) OnChannel(c RemotingChannel) {
+func (h *HandlerWrapper) OnChannel(c RemotingChannel) error {
 	logrus.Debugf("RemotingHandler OnChannel %s", c.RemoteAddr())
+	return nil
 }
 func (h *HandlerWrapper) OnMessage(c RemotingChannel, msg interface{}) {
 	logrus.Debugf("RemotingHandler OnMessage %s : msg:%v", c.RemoteAddr(), msg)

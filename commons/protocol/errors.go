@@ -22,3 +22,9 @@ func ErrorInvalidAuth() *TenuredError {
 		Code: "1001", Message: "invalid auth",
 	}
 }
+
+func ErrorNoModule() *TenuredError {
+	return &TenuredError{
+		Code: "1002", Message: "Can't found module",
+	}
+}
