@@ -22,7 +22,6 @@ type TenuredServer struct {
 	*remoting.HandlerWrapper
 
 	AuthChecker TenuredAuthChecker
-	closeStatus uint32
 }
 
 func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
@@ -34,7 +33,7 @@ func (this *TenuredServer) Invoke(channel string, command *TenuredCommand, timeo
 	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
 
 	if err := this.server.SendTo(channel, command, timeout); err != nil {
-		logrus.Debug("send %d error:", requestId, err)
+		logrus.Debugf("send %d error: %v", requestId, err)
 		delete(this.responseTables, requestId)
 		return nil, err
 	} else {
@@ -64,11 +63,11 @@ func (this *TenuredServer) AsyncInvoke(channel string, command *TenuredCommand, 
 
 	this.server.SyncSendTo(channel, command, timeout, func(err error) {
 		if err != nil {
-			logrus.Debug("async send %d error", requestId)
+			logrus.Debugf("async send %d error", requestId)
 			callback(nil, err)
 			delete(this.responseTables, requestId)
 		} else {
-			logrus.Debug("async send %d error", requestId)
+			logrus.Debugf("async send %d error", requestId)
 		}
 	})
 
@@ -102,14 +101,14 @@ func (this *TenuredServer) makeAck(channel remoting.RemotingChannel, command *Te
 		if remoting.IsRemotingError(err, remoting.ErrClosed) {
 			return
 		}
-		logrus.Warn("send ack error: %s", err.Error())
+		logrus.Warnf("send ack error: %s", err.Error())
 	}
 }
 
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if command.Code == REQUEST_CODE_ATUH {
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
-			logrus.Info("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
+			logrus.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
 			this.makeAck(channel, command, ErrorInvalidAuth())
 		} else {
 			logrus.Infof("channel(%s) auth success", channel.RemoteAddr())
@@ -197,7 +196,6 @@ func NewTenuredServer(address string, config *remoting.RemotingConfig) (*Tenured
 		return nil, err
 	} else {
 		remotingServer.SetCoder(&tenuredCoder{config: config})
-		remotingServer.SetChannelTransfer(&TenuredRemotingChannelTransfer{})
 		server := &TenuredServer{
 			server:           remotingServer,
 			responseTables:   map[uint32]*responseTableBlock{},

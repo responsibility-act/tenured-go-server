@@ -22,8 +22,6 @@ func (this *ModuleAuthChecker) Auth(channel remoting.RemotingChannel, command *T
 		channel.ChannelAttributes()[auth_attributes_name] = "true"
 	}
 
-	channel.ChannelAttributes()
-
 	return nil
 }
 

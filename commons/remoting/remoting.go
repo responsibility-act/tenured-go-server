@@ -26,10 +26,9 @@ type Remoting struct {
 	status   commons.ServerStatus
 	exitChan chan struct{} // notify all goroutines to shutdown
 
-	waitGroup       *sync.WaitGroup // wait for all goroutines
-	coderFactory    RemotingCoderFactory
-	handlerFactory  RemotingHandlerFactory
-	channelTransfer RemotingChannelTransfer
+	waitGroup      *sync.WaitGroup // wait for all goroutines
+	coderFactory   RemotingCoderFactory
+	handlerFactory RemotingHandlerFactory
 
 	hocks           map[Hock]func()
 	channelSelector func(address string, timeout time.Duration) (RemotingChannel, error)
@@ -53,10 +52,6 @@ func (this *Remoting) SetHandler(handler RemotingHandler) {
 	this.SetHandlerFactory(func(channel RemotingChannel, config RemotingConfig) RemotingHandler {
 		return handler
 	})
-}
-
-func (this *Remoting) SetChannelTransfer(transfer RemotingChannelTransfer) {
-	this.channelTransfer = transfer
 }
 
 func (this *Remoting) RegisterHock(hock Hock, fn func()) {
@@ -127,18 +122,12 @@ func (this *Remoting) newChannel(address string, conn *net.TCPConn) RemotingChan
 	channel.waitGroup = this.waitGroup
 	channel.coder = this.coderFactory(channel, *this.config)
 	channel.handler = this.handlerFactory(channel, *this.config)
+	this.channels[address] = channel
 	channel.Do(func(ch RemotingChannel) {
 		delete(this.channels, ch.RemoteAddr())
 		this.waitGroup.Done()
 	})
-
-	var wapperChannel RemotingChannel = channel
-	if this.channelTransfer != nil {
-		wapperChannel = this.channelTransfer.Transform(channel)
-	}
-	this.channels[address] = wapperChannel
-
-	return wapperChannel
+	return channel
 }
 
 func (this *Remoting) IsActive() bool {

@@ -24,10 +24,6 @@ type RemotingChannel interface {
 	Close()
 }
 
-type RemotingChannelTransfer interface {
-	Transform(RemotingChannel) RemotingChannel
-}
-
 type sendMessage struct {
 	msg     []byte
 	result  chan error
