@@ -21,7 +21,7 @@ func TestCommand(t *testing.T) {
 
 	t.Log(response.GetError())
 
-	response.RemotingError(TenuredError{"1002", "test error2"})
+	response.RemotingError(&TenuredError{"1002", "test error2"})
 
 	re := response.GetError()
 

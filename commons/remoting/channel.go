@@ -128,7 +128,9 @@ func (this *defChannel) AsyncWrite(msg interface{}, timeout time.Duration, callb
 func (this *defChannel) Do(onClose func(channel RemotingChannel)) error {
 	this.onCloseFn = onClose
 	go this.syncDo(this.readLoop)
-	go this.syncDo(this.heartbeatLoop)
+	if this.config.IdleTime > 0 {
+		go this.syncDo(this.heartbeatLoop)
+	}
 	go this.syncDo(this.writeLoop)
 	err := this.handler.OnChannel(this)
 	if err != nil {
@@ -166,6 +168,7 @@ func (this *defChannel) writeLoop() {
 		this.closeUnWriteMessageChan()
 		this.Close()
 	}()
+	logrus.Debug("start write loop:", this.RemoteAddr())
 
 	for {
 		select {
@@ -185,13 +188,14 @@ func (this *defChannel) writeLoop() {
 
 func (this *defChannel) readLoop() {
 	defer this.Close()
-
+	logrus.Debug("start read loop:", this.RemoteAddr())
 	for {
 		select {
 		case <-this.closeChan:
 			return
 		default:
 			if msg, err := this.decoderMessage(this.conn); err != nil {
+				logrus.Infof("decode error close channel %s, error:%s ", this.RemoteAddr(), err)
 				return
 			} else if msg == nil {
 				//read deadline
@@ -253,11 +257,9 @@ func (this *defChannel) resetReadIdle() {
 }
 
 func (this *defChannel) heartbeatLoop() {
-	logrus.Debug("start heartbeat loop:", this.RemoteAddr())
-	defer func() {
-		this.idleTimer.Stop()
-		this.Close()
-	}()
+	logrus.Debug("start heartbeat loop: ", this.RemoteAddr())
+	defer this.Close()
+
 	idleCheckTime := this.heartbeatTimeout()
 	for {
 		select {

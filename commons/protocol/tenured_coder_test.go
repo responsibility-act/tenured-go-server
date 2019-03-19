@@ -7,14 +7,16 @@ import (
 	"testing"
 )
 
-func TestTenuredCoder(t *testing.T) {
-	c := tenuredCoder{config: remoting.DefaultConfig()}
+var c = tenuredCoder{config: remoting.DefaultConfig()}
 
+func TestTenuredCoder_Request(t *testing.T) {
 	request := NewRequest(1)
 	_ = request.SetHeader(map[string]string{"name": "value"})
 	request.Body = []byte("testbody")
 	bs, err := c.Encode(nil, request)
 	assert.Nil(t, err)
+
+	t.Log(string(bs))
 
 	reader := bytes.NewReader(bs)
 	d1, err := c.Decode(nil, reader)
@@ -30,4 +32,20 @@ func TestTenuredCoder(t *testing.T) {
 	assert.Equal(t, string(decodeReq.header), `{"name":"value"}`)
 	assert.Equal(t, decodeReq.Body, request.Body)
 	assert.Equal(t, decodeReq.Body, []byte("testbody"))
+}
+
+func TestTenuredCoder_Response(t *testing.T) {
+	response := NewACK(1)
+	response.RemotingError(ErrorNoAuth())
+
+	bs, err := c.Encode(nil, response)
+
+	reader := bytes.NewReader(bs)
+	d1, err := c.Decode(nil, reader)
+	assert.Nil(t, err)
+
+	dResp := d1.(*TenuredCommand)
+	assert.False(t, dResp.IsSuccess())
+	t.Log(string(dResp.header))
+	t.Log(string(dResp.Body))
 }

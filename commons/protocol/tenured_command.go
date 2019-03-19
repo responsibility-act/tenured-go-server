@@ -7,8 +7,8 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/atomic"
 )
 
-const FLAG_ACK = 010
-const FLAG_ONEWAY = 001
+const FLAG_ACK = 2    //0b10
+const FLAG_ONEWAY = 1 //0b01
 
 const RESPONSE_SUCCESS = 0
 const REQUEST_CODE_IDLE = uint16(0)
@@ -40,6 +40,10 @@ type TenuredCommand struct {
 
 	//	消息内容body，用户传递消息内容体字节流，如果消息类型是ACK且code != 0 此处传递是错误消息内容描述，且不经过base64处理。可用为空
 	Body []byte
+}
+
+func (this *TenuredCommand) ID() uint32 {
+	return this.id
 }
 
 func (this *TenuredCommand) String() string {
@@ -80,7 +84,7 @@ func (this *TenuredCommand) SetHeader(header interface{}) error {
 }
 
 func (this *TenuredCommand) GetHeader(header interface{}) error {
-	if header == nil {
+	if this.header == nil || header == nil {
 		return ErrNoHeader
 	}
 	return json.Unmarshal(this.header, header)
@@ -93,8 +97,12 @@ func (this *TenuredCommand) Error(error, message string) *TenuredCommand {
 	return this
 }
 
-func (this *TenuredCommand) RemotingError(error TenuredError) *TenuredCommand {
-	return this.Error(error.Code, error.Message)
+func (this *TenuredCommand) RemotingError(error *TenuredError) *TenuredCommand {
+	if error != nil {
+		return this.Error(error.Code, error.Message)
+	} else {
+		return this
+	}
 }
 
 func (this *TenuredCommand) GetError() error {

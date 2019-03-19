@@ -102,10 +102,13 @@ func (this *tenuredService) RegisterCommandProcesser(code uint16, processer Tenu
 	this.commandProcesser[code] = &tenuredCommandRunner{process: processer, executorService: executorService}
 }
 
-func (this *tenuredService) makeAck(channel remoting.RemotingChannel, command *TenuredCommand, err *TenuredError) {
-	response := NewACK(command.id)
+func (this *tenuredService) makeAck(channel remoting.RemotingChannel, requestCommand *TenuredCommand, header interface{}, err *TenuredError) {
+	response := NewACK(requestCommand.id)
 	if err != nil {
-		response.RemotingError(*err)
+		response.RemotingError(err)
+	}
+	if header != nil {
+		_ = response.SetHeader(header)
 	}
 	if err := channel.Write(response, time.Second*7); err != nil {
 		if remoting.IsRemotingError(err, remoting.ErrClosed) {
@@ -116,8 +119,14 @@ func (this *tenuredService) makeAck(channel remoting.RemotingChannel, command *T
 }
 
 func (this *tenuredService) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
-	if processRunner, has := this.commandProcesser[command.code]; has {
+	if command.code == REQUEST_CODE_IDLE {
+		logrus.Debug("receiver idle ", channel.RemoteAddr())
+		this.makeAck(channel, command, nil, nil)
+		return
+	} else if processRunner, has := this.commandProcesser[command.code]; has {
 		processRunner.onCommand(channel, command)
+	} else {
+		logrus.Warn("not found coder processer:", command.code)
 	}
 }
 

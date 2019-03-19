@@ -6,9 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type TenuredCommandProcesser interface {
-	OnCommand(channel remoting.RemotingChannel, command *TenuredCommand)
-}
+type TenuredCommandProcesser func(channel remoting.RemotingChannel, command *TenuredCommand)
 
 type tenuredCommandRunner struct {
 	process         TenuredCommandProcesser
@@ -23,11 +21,11 @@ func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, co
 
 	if this.executorService != nil {
 		if err := this.executorService.Execute(func() {
-			this.process.OnCommand(channel, command)
+			this.process(channel, command)
 		}); err != nil {
 			logrus.Errorf("command is error: %v", err)
 		}
 	} else {
-		this.process.OnCommand(channel, command)
+		this.process(channel, command)
 	}
 }

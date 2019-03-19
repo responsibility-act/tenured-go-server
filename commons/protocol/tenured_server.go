@@ -8,27 +8,25 @@ import (
 type TenuredServer struct {
 	tenuredService
 	AuthChecker TenuredAuthChecker
+	*AuthHeader
 }
 
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if command.code == REQUEST_CODE_ATUH {
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
 			logrus.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
-			this.makeAck(channel, command, ErrorInvalidAuth())
+			this.makeAck(channel, command, nil, ErrorInvalidAuth())
 		} else {
 			logrus.Infof("channel(%s) auth success", channel.RemoteAddr())
-			this.makeAck(channel, command, nil)
+			this.makeAck(channel, command, this.AuthHeader, nil)
 		}
 		return
 	} else if !this.AuthChecker.IsAuthed(channel) {
-		this.makeAck(channel, command, ErrorNoAuth())
+		this.makeAck(channel, command, nil, ErrorNoAuth())
 		this.fastFailChannel(channel)
 		return
 	}
-
-	if processRunner, has := this.commandProcesser[command.code]; has {
-		processRunner.onCommand(channel, command)
-	}
+	this.tenuredService.onCommandProcesser(channel, command)
 }
 
 func (this *TenuredServer) OnMessage(channel remoting.RemotingChannel, msg interface{}) {
