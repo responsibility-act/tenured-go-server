@@ -21,7 +21,7 @@ func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, 
 			this.makeAck(channel, command, this.AuthHeader, nil)
 		}
 		return
-	} else if !this.AuthChecker.IsAuthed(channel) {
+	} else if this.AuthChecker != nil && !this.AuthChecker.IsAuthed(channel) {
 		this.makeAck(channel, command, nil, ErrorNoAuth())
 		this.fastFailChannel(channel)
 		return

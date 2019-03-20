@@ -25,6 +25,8 @@ type TenuredService interface {
 		callback func(tenuredCommand *TenuredCommand, err error))
 
 	RegisterCommandProcesser(code uint16, processer TenuredCommandProcesser, executorService executors.ExecutorService)
+
+	IsActive() bool
 }
 
 type tenuredService struct {
@@ -182,6 +184,10 @@ func (this *tenuredService) waitRequest(interrupt bool) {
 			<-time.After(time.Millisecond * 200)
 		}
 	}
+}
+
+func (this *tenuredService) IsActive() bool {
+	return this.remoting.IsActive()
 }
 
 func (this *tenuredService) Shutdown(interrupt bool) {
