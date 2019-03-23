@@ -6,7 +6,7 @@ import (
 )
 
 type ConsulConfig struct {
-	config *registry.PluginConfig
+	config registry.PluginConfig
 }
 
 func (this *ConsulConfig) Scheme() string {

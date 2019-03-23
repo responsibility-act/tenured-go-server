@@ -6,7 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type TenuredCommandProcesser func(channel remoting.RemotingChannel, command *TenuredCommand)
+type TenuredCommandProcesser func(channel remoting.RemotingChannel, request *TenuredCommand)
 
 type tenuredCommandRunner struct {
 	process         TenuredCommandProcesser

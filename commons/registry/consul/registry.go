@@ -28,6 +28,7 @@ type ConsulServiceRegistry struct {
 }
 
 func (this *ConsulServiceRegistry) Start() error {
+	logrus.Info()
 	return nil
 }
 
@@ -47,8 +48,8 @@ func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstan
 		return err
 	} else {
 		check := &api.AgentServiceCheck{ // 健康检查
-			Interval: attrs.Interval,
-			Timeout:  attrs.RequestTimeout,
+			Interval:                       attrs.Interval,
+			Timeout:                        attrs.RequestTimeout,
 			DeregisterCriticalServiceAfter: attrs.Deregister,
 		}
 		switch attrs.CheckType {
@@ -231,7 +232,7 @@ func (this *ConsulServiceRegistry) removeSubscribe(name string, listener registr
 	return sets.listeners.Size() == 0
 }
 
-func newRegistry(pluginConfig *registry.PluginConfig) (*ConsulServiceRegistry, error) {
+func newRegistry(pluginConfig registry.PluginConfig) (*ConsulServiceRegistry, error) {
 	config := &ConsulConfig{config: pluginConfig}
 	serviceRegistry := &ConsulServiceRegistry{
 		config:     config,

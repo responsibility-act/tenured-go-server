@@ -190,6 +190,10 @@ func (this *tenuredService) IsActive() bool {
 	return this.remoting.IsActive()
 }
 
+func (this *tenuredService) IsStatus(status commons.ServerStatus) bool {
+	return this.remoting.IsStatus(status)
+}
+
 func (this *tenuredService) Shutdown(interrupt bool) {
 	this.remoting.RegisterHock(remoting.HOCK_SHUTDOWN_AFTER, func() {
 		this.waitRequest(interrupt)

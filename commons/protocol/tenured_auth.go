@@ -19,14 +19,14 @@ func (this *ModuleAuthChecker) Auth(channel remoting.RemotingChannel, command *T
 	if err := command.GetHeader(header); err != nil {
 		return err
 	} else {
-		channel.ChannelAttributes()[auth_attributes_name] = "true"
+		channel.Attributes()[auth_attributes_name] = true
 	}
 
 	return nil
 }
 
 func (this *ModuleAuthChecker) IsAuthed(channel remoting.RemotingChannel) bool {
-	attrs := channel.ChannelAttributes()
+	attrs := channel.Attributes()
 	if attrs == nil {
 		return false
 	}

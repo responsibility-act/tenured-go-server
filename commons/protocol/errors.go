@@ -28,3 +28,11 @@ func ErrorNoModule() *TenuredError {
 		Code: "1002", Message: "Can't found module",
 	}
 }
+
+func ErrorInvalidHeader(err error) *TenuredError {
+	return &TenuredError{Code: "1003", Message: err.Error()}
+}
+
+func ErrorHandler(err error) *TenuredError {
+	return &TenuredError{Code: "9999", Message: err.Error()}
+}

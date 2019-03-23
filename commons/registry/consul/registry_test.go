@@ -27,18 +27,20 @@ func (this *NLister) OnNotify(status registry.RegistionStatus, serverInstances [
 }
 
 func TestConsulServiceRegistry_Register(t *testing.T) {
-	si, sr, err := registry.GetRegistry(config)
-	assert.Nil(t, err)
+	plugin, has := registry.GetPlugins(config.Plugin)
+	assert.True(t, has)
+
+	sr, err := plugin.Registry(*config)
 
 	err = sr.Subscribe("test", &NLister{})
 	t.Log(err)
+
+	si, _ := plugin.Instance(map[string]string{"interval": "1s"})
 
 	si.Id = "b102c658-830a-4d63-ba08-6a1ab75823d8"
 	si.Name = "test"
 	si.Address = "127.0.0.1:6071"
 	si.Metadata = map[string]string{"test_metadata": "demo"}
-	//修改配置，存活检测周期
-	si.PluginAttrs.Config(map[string]string{"interval": "1s"})
 
 	err = sr.Register(*si)
 	assert.Nil(t, err)

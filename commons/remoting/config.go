@@ -6,18 +6,18 @@ import (
 
 type RemotingConfig struct {
 	//Asynchronously send message size
-	SendLimit int `json:"send_limit" yaml:"send_limit"`
+	SendLimit int `json:"sendLimit" yaml:"sendLimit"`
 
 	// the limit of packet send channel
-	PacketBytesLimit int `json:"packed_bytes_limit" yaml:"packed_bytes_limit"`
+	PacketBytesLimit int `json:"packetBytesLimit" yaml:"packetBytesLimit"`
 
-	AcceptTimeout int `json:"accept_timeout" yaml:"accept_timeout"`
+	AcceptTimeout int `json:"acceptTimeout" yaml:"acceptTimeout"`
 
 	//heartbeat time,and timeout SECONDS
-	IdleTime int `json:"idle_time" yaml:"idle_time"`
+	IdleTime int `json:"idleTime" yaml:"idleTime"`
 
 	//连续几次heartbeat不传递就就认为掉线
-	IdleTimeout int `json:"idle_timeout" yaml:"idle_timeout"`
+	IdleTimeout int `json:"idleTimeout" yaml:"idleTimeout"`
 }
 
 func (cfg *RemotingConfig) String() string {
@@ -27,7 +27,7 @@ func (cfg *RemotingConfig) String() string {
 
 func DefaultConfig() *RemotingConfig {
 	return &RemotingConfig{
-		SendLimit:        1000,
+		SendLimit:        10000,
 		PacketBytesLimit: 1024,
 		AcceptTimeout:    3,
 		IdleTime:         15,

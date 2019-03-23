@@ -15,7 +15,7 @@ import (
 type RemotingChannel interface {
 	RemoteAddr() string
 
-	ChannelAttributes() map[string]string
+	Attributes() map[string]interface{}
 
 	Write(msg interface{}, timeout time.Duration) error
 
@@ -38,7 +38,7 @@ type defChannel struct {
 	coder   RemotingCoder
 	handler RemotingHandler
 
-	attributes map[string]string
+	attributes map[string]interface{}
 
 	onCloseFn func(channel RemotingChannel)
 
@@ -55,7 +55,7 @@ type defChannel struct {
 func (this *defChannel) RemoteAddr() string {
 	return this.addr
 }
-func (this *defChannel) ChannelAttributes() map[string]string {
+func (this *defChannel) Attributes() map[string]interface{} {
 	return this.attributes
 }
 
@@ -295,7 +295,7 @@ func NewChannel(conn *net.TCPConn, config *RemotingConfig) *defChannel {
 		config:     config,
 		conn:       conn,
 		addr:       conn.RemoteAddr().String(),
-		attributes: make(map[string]string),
+		attributes: map[string]interface{}{},
 		closeChan:  make(chan struct{}),
 		closeOnce:  &sync.Once{},
 		sendChan:   make(chan sendMessage, config.SendLimit),

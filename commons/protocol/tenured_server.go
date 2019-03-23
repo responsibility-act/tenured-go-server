@@ -13,6 +13,7 @@ type TenuredServer struct {
 
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if command.code == REQUEST_CODE_ATUH {
+		//TODO auth 检测没有分配线程
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
 			logrus.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
 			this.makeAck(channel, command, nil, ErrorInvalidAuth())
