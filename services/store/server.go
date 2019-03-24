@@ -61,9 +61,24 @@ func (this *storeServer) initRegistry() error {
 	}
 
 	if ss, ok := this.registry.(commons.Service); ok {
-		return ss.Start()
+		if err := ss.Start(); err != nil {
+			return err
+		}
 	}
 
+	if serverInstance, err := plugins.Instance(this.config.RegistryAttributes); err != nil {
+		return err
+	} else {
+		serverInstance.Name = this.config.Prefix + "_store"
+		serverInstance.Id = "4787dc7f-6a0f-41a6-92d6-d0c15e4a4c30" //TODO 这里的管理器需要修改
+		serverInstance.Address = this.address
+		serverInstance.Metadata = this.config.Metadata
+		serverInstance.Tags = this.config.Tags
+
+		if err := this.registry.Register(*serverInstance); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

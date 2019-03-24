@@ -11,6 +11,14 @@ func (this *TenuredError) Error() string {
 	return fmt.Sprintf("[%s]%s", this.Code, this.Message)
 }
 
+func ConvertError(err error) *TenuredError {
+	if terr, ok := err.(*TenuredError); ok {
+		return terr
+	} else {
+		return ErrorHandler(err)
+	}
+}
+
 func ErrorNoAuth() *TenuredError {
 	return &TenuredError{
 		Code: "1000", Message: "not found auth info.",

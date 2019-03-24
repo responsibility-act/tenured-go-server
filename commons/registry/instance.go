@@ -38,6 +38,9 @@ func (this ServerInstance) String() string {
 }
 
 func LoadModel(obj interface{}, m map[string]string) {
+	if m == nil || len(m) == 0 {
+		return
+	}
 	defer func() {
 		if e := recover(); e != nil {
 			logrus.Debug(e)
@@ -78,4 +81,17 @@ func LoadModel(obj interface{}, m map[string]string) {
 			logrus.Debugf("Key '%s' does not have a corresponding field in obj %+v\n", k, obj)
 		}
 	}
+}
+
+func IsOK(instance ServerInstance) bool {
+	return instance.Status == "OK"
+}
+
+func AllNotOK(instance ...ServerInstance) bool {
+	for _, v := range instance {
+		if IsOK(v) {
+			return false
+		}
+	}
+	return true
 }

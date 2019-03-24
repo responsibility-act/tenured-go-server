@@ -1,9 +1,11 @@
 package protocol
 
 import (
+	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 type TenuredCommandProcesser func(channel remoting.RemotingChannel, request *TenuredCommand)
@@ -21,7 +23,9 @@ func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, co
 
 	if this.executorService != nil {
 		if err := this.executorService.Execute(func() {
+			start := time.Now().Unix()
 			this.process(channel, command)
+			fmt.Println(time.Now().Unix() - start)
 		}); err != nil {
 			logrus.Errorf("command is error: %v", err)
 		}

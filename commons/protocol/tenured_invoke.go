@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/kataras/iris/core/errors"
@@ -20,9 +21,24 @@ type InvokeMethod struct {
 	out    reflect.Type
 }
 
+func (this *InvokeMethod) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
+	logrus.Error("handler error: ", err)
+	response := NewACK(request.id)
+	response.RemotingError(ErrorHandler(err))
+	if err := channel.Write(response, time.Second*3); err != nil {
+		logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+	}
+}
+
 //0: func(requestCommand) responseCommand
 func (this *InvokeMethod) invoke0() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
+		defer func() {
+			if err := recover(); err != nil {
+				this.invokeError(channel, request, commons.Catch(err))
+			}
+		}()
+
 		values := this.method.Func.Call([]reflect.Value{reflect.ValueOf(this.server), reflect.ValueOf(request)})
 		if err := channel.Write(values[0], time.Second*3); err != nil {
 			logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
@@ -33,8 +49,14 @@ func (this *InvokeMethod) invoke0() TenuredCommandProcesser {
 //1: func(header) header,error
 func (this *InvokeMethod) invoke1() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
+		defer func() {
+			if err := recover(); err != nil {
+				this.invokeError(channel, request, commons.Catch(err))
+			}
+		}()
+
 		response := NewACK(request.id)
-		requestHeader := reflect.New(this.in)
+		requestHeader := reflect.New(this.in.Elem()).Interface()
 		if err := request.GetHeader(requestHeader); err != nil {
 			response.RemotingError(ErrorInvalidHeader(err))
 		} else {
@@ -58,8 +80,13 @@ func (this *InvokeMethod) invoke1() TenuredCommandProcesser {
 //2: func(header,body) header,body,error
 func (this *InvokeMethod) invoke2() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
+		defer func() {
+			if err := recover(); err != nil {
+				this.invokeError(channel, request, commons.Catch(err))
+			}
+		}()
 		response := NewACK(request.id)
-		requestHeader := reflect.New(this.in)
+		requestHeader := reflect.New(this.in.Elem()).Interface()
 		requestBody := request.Body
 		if err := request.GetHeader(requestHeader); err != nil {
 			response.RemotingError(ErrorInvalidHeader(err))
@@ -107,15 +134,15 @@ func (this *TenuredInvoke) errors(method reflect.Method) error {
 }
 
 func (this *TenuredInvoke) isBytes(t reflect.Type) bool {
-	return t.ConvertibleTo(reflect.TypeOf([]byte{}))
+	return t == reflect.TypeOf([]byte{})
 }
 
 func (this *TenuredInvoke) isError(t reflect.Type) bool {
-	return t.ConvertibleTo(reflect.TypeOf((*TenuredError)(nil)))
+	return t == reflect.TypeOf((*TenuredError)(nil))
 }
 
 func (this *TenuredInvoke) isCommand(t reflect.Type) bool {
-	return t.ConvertibleTo(reflect.TypeOf((*TenuredCommand)(nil)))
+	return t == reflect.TypeOf((*TenuredCommand)(nil))
 }
 
 func (this *TenuredInvoke) Invoke(code uint16, methodName string, executor executors.ExecutorService) error {
@@ -136,16 +163,19 @@ func (this *TenuredInvoke) Invoke(code uint16, methodName string, executor execu
 				return this.errors(method)
 			}
 			invokeMethod.module = 0
-		} else if method.Type.NumOut() == 2 && this.isBytes(method.Type.Out(1)) {
+		} else if method.Type.NumOut() == 2 &&
+			method.Type.In(1).Kind() == reflect.Ptr && this.isError(method.Type.Out(1)) {
 			invokeMethod.module = 1
+		} else {
+			return this.errors(method)
 		}
 		invokeMethod.in = inType
 	case 3:
-		if method.Type.NumIn() == 3 && method.Type.NumOut() == 3 &&
+		if method.Type.NumOut() == 3 &&
 			this.isBytes(method.Type.In(2)) &&
 			this.isBytes(method.Type.Out(1)) && this.isError(method.Type.Out(2)) {
 			invokeMethod.module = 2
-			invokeMethod.in = method.Type.In(0)
+			invokeMethod.in = method.Type.In(1)
 			invokeMethod.out = method.Type.Out(0)
 		} else {
 			return this.errors(method)

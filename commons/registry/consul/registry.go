@@ -28,7 +28,6 @@ type ConsulServiceRegistry struct {
 }
 
 func (this *ConsulServiceRegistry) Start() error {
-	logrus.Info()
 	return nil
 }
 

@@ -10,8 +10,10 @@ import (
 )
 
 type storeConfig struct {
-	Registry string `json:"registry" yaml:"registry"` //注册中心
-	Prefix   string `json:"prefix" yaml:"prefix"`     //注册服务的前缀，所有系统保持一致
+	Registry           string            `json:"registry" yaml:"registry"` //注册中心
+	RegistryAttributes map[string]string `json:"registryAttributes" yaml:"registryAttributes"`
+
+	Prefix string `json:"prefix" yaml:"prefix"` //注册服务的前缀，所有系统保持一致
 
 	Data string `json:"data" yaml:"data"` //数据存储位置
 

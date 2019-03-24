@@ -19,10 +19,8 @@ func handlerAccountServer(server *protocol.TenuredServer) (accountServer *Accoun
 	accountServer = &AccountServer{}
 	invoke := protocol.NewInvoke(server, accountServer)
 	executor := executors.NewFixedExecutorService(10, 1000)
-
 	if err = invoke.Invoke(api.AccountServiceApply, "Apply", executor); err != nil {
 		return
 	}
-
 	return
 }

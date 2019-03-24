@@ -195,7 +195,9 @@ func (this *defChannel) readLoop() {
 			return
 		default:
 			if msg, err := this.decoderMessage(this.conn); err != nil {
-				logrus.Infof("decode error close channel %s, error:%s ", this.RemoteAddr(), err)
+				if err != io.EOF && err != io.ErrUnexpectedEOF {
+					logrus.Errorf("channel %s decoder error: %s ", this.RemoteAddr(), err)
+				}
 				return
 			} else if msg == nil {
 				//read deadline
@@ -268,12 +270,12 @@ func (this *defChannel) heartbeatLoop() {
 		case t := <-this.idleTimer.C:
 			timestr := t.Format("2006-01-02 15:04:05")
 			if this.idleTimeout+1 <= this.config.IdleTimeout {
-				logrus.Infof("SendIdle to: %s, time: %s", this.RemoteAddr(), timestr)
+				logrus.Debugf("SendIdle to: %s, time: %s", this.RemoteAddr(), timestr)
 				this.idleTimeout = this.idleTimeout + 1
 				this.idleTimer.Reset(idleCheckTime)
 				this.handler.OnIdle(this)
 			} else {
-				logrus.Infof("IdleTimerOut: %s, %s", this.RemoteAddr(), timestr)
+				logrus.Debugf("IdleTimerOut: %s, %s", this.RemoteAddr(), timestr)
 				return
 			}
 		}

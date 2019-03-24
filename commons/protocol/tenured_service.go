@@ -128,7 +128,7 @@ func (this *tenuredService) onCommandProcesser(channel remoting.RemotingChannel,
 	} else if processRunner, has := this.commandProcesser[command.code]; has {
 		processRunner.onCommand(channel, command)
 	} else {
-		logrus.Warn("not found coder processer:", command.code)
+		logrus.Warn("not found process: ", command.code)
 	}
 }
 
