@@ -1,8 +1,8 @@
 package store
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons/runtime"
 	"github.com/ihaiker/tenured-go-server/commons/runtime/signal"
+	"github.com/ihaiker/tenured-go-server/services"
 	"github.com/kataras/iris/core/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,18 +26,13 @@ var StoreCmd = &cobra.Command{
 			storeCfg, err = initConfig(config)
 			return err
 		} else {
-			searchConfigs := []string{
-				runtime.GetWorkDir() + "/conf/store.yml",
-				runtime.GetWorkDir() + "/conf/store.json",
-				"/etc/tenured/conf/store.yml",
-				"/etc/tenured/conf/store.json",
-			}
+			searchConfigs := services.SearchConfigs(cmd.Use)
 			for _, searchConfig := range searchConfigs {
 				if storeCfg, err = initConfig(searchConfig); err == nil {
 					logrus.Info("use config file: ", searchConfig)
 					return nil
 				} else {
-					logrus.Debugf("search config file %s not found!", searchConfig)
+					logrus.Debugf("config file %s not found!", searchConfig)
 				}
 			}
 			return errors.New("any config found ! \n\t" + strings.Join(searchConfigs, "\n\t"))

@@ -1,6 +1,7 @@
 package signal
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"path/filepath"

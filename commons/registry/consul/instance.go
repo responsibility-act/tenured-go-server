@@ -26,8 +26,8 @@ func newInstance() *ConsulServerAttrs {
 	return &ConsulServerAttrs{
 		CheckType:      "tcp",
 		Health:         "/health",
-		Interval:       "10s",
-		Deregister:     "120m",
+		Interval:       "30s",
+		Deregister:     "10m",
 		RequestTimeout: "3s",
 	}
 }

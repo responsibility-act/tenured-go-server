@@ -141,7 +141,7 @@ func (this *defChannel) Do(onClose func(channel RemotingChannel)) error {
 
 func (this *defChannel) Close() {
 	this.closeOnce.Do(func() {
-		logrus.Infof("close channel: %s", this.RemoteAddr())
+		logrus.Debugf("close channel: %s", this.RemoteAddr())
 		this.idleTimer.Stop()
 		this.handler.OnClose(this)
 		if this.onCloseFn != nil {

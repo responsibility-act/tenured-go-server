@@ -12,11 +12,10 @@ type IpAndPort struct {
 	External string `json:"external" yaml:"external"`
 
 	//使用端口
-	Port     int  `json:"port" yaml:"port"`
-	autoPort bool `json:"autoPort" yaml:"autoPort"` //是否已经自动选择过了
-
+	Port int `json:"port" yaml:"port"`
 	//当端口被占用的时候是否可以自动寻找新的端口，开始位置是Port。
 	EnableAuthPort bool `json:"enableAuthPort" yaml:"enableAuthPort"`
+	autoPort       bool `json:"-"` //是否已经自动选择过了
 
 	//忽略网络
 	IgnoredInterfaces []string `json:"ignoredInterfaces" yaml:"ignoredInterfaces"`

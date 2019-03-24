@@ -34,3 +34,9 @@ func Catch(r interface{}) error {
 	}
 	return e
 }
+
+func Painc(err error) {
+	if err != nil {
+		panic(err)
+	}
+}

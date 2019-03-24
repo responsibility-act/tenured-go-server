@@ -15,10 +15,14 @@ func (this *AccountServer) Apply(account *command.Account) (*command.Account, *p
 	return account, nil
 }
 
-func handlerAccountServer(server *protocol.TenuredServer) (accountServer *AccountServer, err error) {
+func handlerAccountServer(config *storeConfig, server *protocol.TenuredServer) (accountServer *AccountServer, err error) {
 	accountServer = &AccountServer{}
 	invoke := protocol.NewInvoke(server, accountServer)
-	executor := executors.NewFixedExecutorService(10, 1000)
+
+	executor := executors.NewFixedExecutorService(
+		config.Executors.Get("accountSize", 10),
+		config.Executors.Get("accountBuffer", 1000),
+	)
 	if err = invoke.Invoke(api.AccountServiceApply, "Apply", executor); err != nil {
 		return
 	}

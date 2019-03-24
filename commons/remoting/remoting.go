@@ -131,7 +131,7 @@ func (this *remotingImpl) getChannel(address string, timeout time.Duration) (Rem
 
 func (this *remotingImpl) newChannel(address string, conn *net.TCPConn) (RemotingChannel, error) {
 	this.waitGroup.Add(1)
-	logrus.Infof("new channel：%s", address)
+	logrus.Debugf("new channel：%s", address)
 
 	channel := NewChannel(conn, this.config)
 	channel.addr = address

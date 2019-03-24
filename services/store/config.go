@@ -1,49 +1,43 @@
 package store
 
 import (
-	"encoding/json"
-	"errors"
-	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/services"
 )
 
 type storeConfig struct {
-	Registry           string            `json:"registry" yaml:"registry"` //注册中心
-	RegistryAttributes map[string]string `json:"registryAttributes" yaml:"registryAttributes"`
-
 	Prefix string `json:"prefix" yaml:"prefix"` //注册服务的前缀，所有系统保持一致
 
 	Data string `json:"data" yaml:"data"` //数据存储位置
 
-	Attributes map[string]string `json:"attributes" yaml:"attributes"`
+	Registry *services.Registry `json:"registry" yaml:"registry"` //注册中心
 
-	*nets.IpAndPort
-	*remoting.RemotingConfig
+	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
 
-	//服务附加属性
-	Metadata map[string]string `json:"metadata" yaml:"metadata"`
-	Tags     []string          `json:"tags" yaml:"tags"`
+	Executors services.Executors `json:"executors"`
+}
+
+func NewStoreConfig() *storeConfig {
+	return &storeConfig{
+		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
+		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
+		Registry: &services.Registry{
+			Address: mixins.Get(mixins.KeyRegistry, mixins.Registry),
+		},
+		Tcp: &services.Tcp{
+			IpAndPort: &nets.IpAndPort{
+				Port: mixins.GetInt("tenured.store.port", 6072),
+			},
+			RemotingConfig: remoting.DefaultConfig(),
+		},
+		Executors: services.Executors(map[string]int{}),
+	}
 }
 
 func initConfig(configPath string) (*storeConfig, error) {
-	storeCfg = &storeConfig{
-		Registry: mixins.Get(mixins.KeyRegistry, mixins.Registry),
-		Prefix:   mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
-		IpAndPort: &nets.IpAndPort{
-			Port: 6072,
-		},
-		RemotingConfig: remoting.DefaultConfig(),
-	}
-
-	if fs := commons.NewFile(configPath); !fs.Exist() || fs.IsDir() {
-		return nil, errors.New("the config not found : " + configPath)
-	} else if bs, err := fs.ToBytes(); err != nil {
-		return nil, err
-	} else if err := json.Unmarshal(bs, storeCfg); err != nil {
-		return nil, err
-	} else {
-		return storeCfg, nil
-	}
+	storeConfig := NewStoreConfig()
+	err := services.LoadConfig(configPath, storeConfig)
+	return storeConfig, err
 }
