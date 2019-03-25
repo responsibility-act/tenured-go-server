@@ -82,21 +82,9 @@ var ConfigCmd = &cobra.Command{
 				}
 			}
 		} else if test {
-		SERVER:
 			for _, v := range server {
 				if cfg, has := serverConfig[v]; has {
-					if config != "" {
-						commons.Painc(services.LoadConfig(config, cfg))
-					} else {
-						configs := services.SearchConfigs(v)
-						for _, searchCfg := range configs {
-							if commons.NewFile(searchCfg).Exist() {
-								commons.Painc(services.LoadConfig(searchCfg, cfg))
-								continue SERVER
-							}
-						}
-						return errors.New("the server config file not found! " + v)
-					}
+					commons.Painc(services.LoadServerConfig(v, config, cfg))
 				} else {
 					return errors.New("not found server: " + v)
 				}

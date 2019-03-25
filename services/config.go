@@ -8,6 +8,8 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
+	"github.com/sirupsen/logrus"
+	"path/filepath"
 	"strings"
 )
 
@@ -37,11 +39,18 @@ func (this *Executors) Get(key string, def int) int {
 	return def
 }
 
-func SearchConfigs(serverName string) []string {
+type Logs struct {
+	Level   string `json:"level" yaml:"level"`
+	Path    string `json:"path" yaml:"path"`
+	Output  string `json:"Output" yaml:"Output"` //stdout,file
+	Archive bool   `json:"archive" yaml:"archive"`
+}
+
+func SearchServerConfig(serverName string) []string {
 	return []string{
-		runtime.GetWorkDir() + "/conf/" + serverName + ".yml",
+		runtime.GetWorkDir() + "/conf/" + serverName + ".yaml",
 		runtime.GetWorkDir() + "/conf/" + serverName + ".json",
-		"/etc/tenured/conf/" + serverName + ".yml",
+		"/etc/tenured/conf/" + serverName + ".yaml",
 		"/etc/tenured/conf/" + serverName + ".json",
 	}
 }
@@ -57,16 +66,34 @@ func LoadConfig(path string, config interface{}) error {
 		return err
 	}
 
-	if strings.HasSuffix(path, ".json") {
+	ext := filepath.Ext(path)
+	switch ext {
+	case ".json":
 		if err := json.Unmarshal(bs, config); err != nil {
 			return err
 		}
-	} else if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
+	case ".yaml":
 		if err := yaml.Unmarshal(bs, config); err != nil {
 			return err
 		}
-	} else {
+	default:
 		return errors.New("not support config file: " + path)
 	}
 	return nil
+}
+func LoadServerConfig(server, configFile string, configObj interface{}) error {
+	if configFile != "" {
+		return LoadConfig(configFile, configObj)
+	} else {
+		searchConfigs := SearchServerConfig(server)
+		for _, searchConfig := range searchConfigs {
+			if err := LoadConfig(searchConfig, configObj); err == nil {
+				logrus.Info("use config file: ", searchConfig)
+				return nil
+			} else {
+				logrus.Debugf("config file %s error: %s", searchConfig, err)
+			}
+		}
+		return errors.New("any config found ! \n\t" + strings.Join(searchConfigs, "\n\t"))
+	}
 }

@@ -1,12 +1,12 @@
 package store
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/runtime/signal"
 	"github.com/ihaiker/tenured-go-server/services"
-	"github.com/kataras/iris/core/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"strings"
+	"os"
 )
 
 var storeService *storeServer
@@ -22,23 +22,21 @@ var StoreCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if config != "" {
-			storeCfg, err = initConfig(config)
-			return err
-		} else {
-			searchConfigs := services.SearchConfigs(cmd.Use)
-			for _, searchConfig := range searchConfigs {
-				if storeCfg, err = initConfig(searchConfig); err == nil {
-					logrus.Info("use config file: ", searchConfig)
-					return nil
-				} else {
-					logrus.Debugf("config file %s not found!", searchConfig)
-				}
-			}
-			return errors.New("any config found ! \n\t" + strings.Join(searchConfigs, "\n\t"))
-		}
+		storeCfg = NewStoreConfig()
+		return services.LoadServerConfig("store", config, storeCfg)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if err = os.Chdir(storeCfg.WorkDir); err != nil {
+			return
+		}
+
+		if debug, err := cmd.Root().PersistentFlags().GetBool("debug"); err == nil && debug {
+			storeCfg.Logs.Level = "debug"
+		}
+		if err = logs.InitLogrus(storeCfg.Logs.Output, storeCfg.Logs.Level,
+			storeCfg.Logs.Path, storeCfg.Logs.Archive); err != nil {
+			return err
+		}
 		storeService = newStoreServer(storeCfg)
 		err = storeService.Start()
 		if err == nil {
@@ -60,4 +58,8 @@ func init() {
 		`the config file. 
 default: ${workDir}/conf/store.{yaml|json} or /etc/tenured/store.{yaml|json}`)
 
+}
+
+func logurs(agent string) *logrus.Entry {
+	return logrus.WithField("agent", agent)
 }

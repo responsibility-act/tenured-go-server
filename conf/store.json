@@ -22,5 +22,8 @@
     "idleTime": 15,
     "idleTimeout": 3,
     "attributes": null
+  },
+  "logs": {
+    "output": "file"
   }
 }
