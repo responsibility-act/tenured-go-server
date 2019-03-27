@@ -11,12 +11,11 @@ type TextFormatter struct {
 }
 
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	var b *bytes.Buffer
+	var b = &bytes.Buffer{}
 	if entry.Buffer != nil {
-		b = entry.Buffer
-	} else {
-		b = &bytes.Buffer{}
+		_, _ = entry.Buffer.WriteTo(b)
 	}
+
 	b.WriteString(entry.Time.Format("2006-01-02 15:04:05 "))
 	b.WriteString("[")
 	b.WriteString(entry.Level.String())
@@ -53,5 +52,6 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	b.WriteString(entry.Message)
 	b.WriteString("\n")
+
 	return b.Bytes(), nil
 }

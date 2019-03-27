@@ -77,14 +77,12 @@ func (this *RollingFileOutput) write(bs []byte) error {
 		_ = this.newFile()
 	}
 
-	// Writing to file
 	if _, err := this.file.Write(bs); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Write logrus.Entry.
 func (this *RollingFileOutput) writeLoop() {
 	for entry := range this.queue {
 		if err := this.write(entry); err != nil {

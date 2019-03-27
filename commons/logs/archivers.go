@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	GzipSuffix = ".gz"
+	GzipSuffix = ".zip"
 )
 
 type ArchiveFunc func(fileName string) error
