@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/go-yaml/yaml"
 	"github.com/ihaiker/tenured-go-server/commons"
+	_ "github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
@@ -47,12 +48,18 @@ type Logs struct {
 }
 
 func SearchServerConfig(serverName string) []string {
-	return []string{
+	searchFiles := []string{
 		runtime.GetWorkDir() + "/conf/" + serverName + ".yaml",
 		runtime.GetWorkDir() + "/conf/" + serverName + ".json",
+		runtime.GetWorkDir() + "/../conf/" + serverName + ".yaml",
+		runtime.GetWorkDir() + "/../conf/" + serverName + ".json",
 		"/etc/tenured/conf/" + serverName + ".yaml",
 		"/etc/tenured/conf/" + serverName + ".json",
 	}
+	for k, v := range searchFiles {
+		searchFiles[k], _ = filepath.Abs(v)
+	}
+	return searchFiles
 }
 
 func LoadConfig(path string, config interface{}) error {

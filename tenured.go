@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ihaiker/tenured-go-server/services/console"
 	"github.com/ihaiker/tenured-go-server/services/store"
 	"github.com/ihaiker/tenured-go-server/tools"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(store.StoreCmd)
+	rootCmd.AddCommand(console.ConsoleCommand)
 	rootCmd.AddCommand(tools.ConfigCmd)
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "debug module")

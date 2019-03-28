@@ -2,15 +2,24 @@ package tools
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-yaml/yaml"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/services"
+	"github.com/ihaiker/tenured-go-server/services/console"
 	"github.com/ihaiker/tenured-go-server/services/store"
-	"github.com/kataras/iris/core/errors"
 	"github.com/spf13/cobra"
 	"strings"
 )
+
+var serverConfig map[string]interface{}
+
+func init() {
+	serverConfig = map[string]interface{}{}
+	serverConfig["store"] = store.NewStoreConfig()
+	serverConfig["console"] = console.NewConsoleConfig()
+}
 
 var ConfigCmd = &cobra.Command{
 	Use:     "config",
@@ -48,8 +57,6 @@ var ConfigCmd = &cobra.Command{
 		server, err := cmd.PersistentFlags().GetStringArray("server")
 		commons.Painc(err)
 
-		serverConfig := map[string]interface{}{}
-		serverConfig["store"] = store.NewStoreConfig()
 		if len(server) == 0 {
 			server = make([]string, 0)
 			for k := range serverConfig {

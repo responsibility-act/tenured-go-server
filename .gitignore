@@ -16,3 +16,6 @@ bin
 tcp
 vendor
 get.txt
+*.iml
+.idea
+.DS_Store

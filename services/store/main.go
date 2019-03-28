@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+var logger *logrus.Logger
 var storeService *storeServer
 var storeCfg *storeConfig
 
@@ -23,20 +24,28 @@ var StoreCmd = &cobra.Command{
 			return err
 		}
 		storeCfg = NewStoreConfig()
-		return services.LoadServerConfig("store", config, storeCfg)
-	},
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if err := services.LoadServerConfig("store", config, storeCfg); err != nil {
+			return err
+		}
+
 		if err = os.Chdir(storeCfg.WorkDir); err != nil {
-			return
+			return err
 		}
 
 		if debug, err := cmd.Root().PersistentFlags().GetBool("debug"); err == nil && debug {
 			storeCfg.Logs.Level = "debug"
 		}
-		if err = logs.InitLogrus(storeCfg.Logs.Output, storeCfg.Logs.Level,
-			storeCfg.Logs.Path, storeCfg.Logs.Archive); err != nil {
+
+		if logger, err = logs.InitLogger(
+			"store",
+			storeCfg.Logs.Output, storeCfg.Logs.Level,
+			storeCfg.Logs.Path, storeCfg.Logs.Archive,
+		); err != nil {
 			return err
 		}
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		storeService = newStoreServer(storeCfg)
 		err = storeService.Start()
 		if err == nil {
@@ -58,8 +67,4 @@ func init() {
 		`the config file. 
 default: ${workDir}/conf/store.{yaml|json} or /etc/tenured/store.{yaml|json}`)
 
-}
-
-func logurs(agent string) *logrus.Entry {
-	return logrus.WithField("agent", agent)
 }

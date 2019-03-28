@@ -1,0 +1,29 @@
+{
+  "http": ":6074",
+  "prefix": "tenured",
+  "data": "/data/tenured",
+  "workDir": "/Users/haiker/workbench/self/go/src/github.com/ihaiker/tenured-go-server",
+  "logs": {
+    "level": "info",
+    "path": "/data/tenured/logs/store.log",
+    "Output": "stdout",
+    "archive": false
+  },
+  "registry": {
+    "address": "consul://127.0.0.1:8500"
+  },
+  "tcp": {
+    "bind": "",
+    "external": "",
+    "port": 6073,
+    "enableAuthPort": false,
+    "ignoredInterfaces": null,
+    "preferredNetworks": null,
+    "sendLimit": 10000,
+    "packetBytesLimit": 1024,
+    "acceptTimeout": 3,
+    "idleTime": 15,
+    "idleTimeout": 3
+  },
+  "executors": {}
+}

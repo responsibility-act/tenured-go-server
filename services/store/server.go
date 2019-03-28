@@ -8,7 +8,6 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/kataras/iris/core/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type storeServer struct {
@@ -83,7 +82,7 @@ func (this *storeServer) initRegistry() error {
 }
 
 func (this *storeServer) Start() error {
-	logrus.Info("start store server.")
+	logger.Info("start store server.")
 	if err := this.initTenuredServer(); err != nil {
 		return err
 	}
@@ -94,7 +93,7 @@ func (this *storeServer) Start() error {
 }
 
 func (this *storeServer) Shutdown(interrupt bool) {
-	logrus.Info("stop store server.")
+	logger.Info("stop store server.")
 	if ss, ok := this.accountServer.(commons.Service); ok {
 		ss.Shutdown(false)
 	}
