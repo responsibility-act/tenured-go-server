@@ -1,4 +1,4 @@
-package account
+package register
 
 import (
 	"github.com/ihaiker/tenured-go-server/api"

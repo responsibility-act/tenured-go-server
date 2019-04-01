@@ -19,3 +19,5 @@ get.txt
 *.iml
 .idea
 .DS_Store
+
+/data

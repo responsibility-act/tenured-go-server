@@ -22,6 +22,7 @@ func init() {
 	rootCmd.AddCommand(store.StoreCmd)
 	rootCmd.AddCommand(console.ConsoleCommand)
 	rootCmd.AddCommand(tools.ConfigCmd)
+	rootCmd.AddCommand(tools.InstallCommand)
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "debug module")
 }

@@ -83,6 +83,7 @@ func (this *tenuredService) AsyncInvoke(channel string, command *TenuredCommand,
 		}
 	})
 
+	//TODO 设置异步执行可调用携程管理
 	go func() {
 		response, err := responseFuture.GetWithTimeout(timeout)
 		delete(this.responseTables, requestId)

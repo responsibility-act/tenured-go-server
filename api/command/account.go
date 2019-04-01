@@ -22,5 +22,7 @@ type Account struct {
 	StatusDescription string `json:"statusDescription"` //审核结果描述
 	StatusTime        string `json:"statusTime"`        //审核时间
 
+	AllowIP []string `json:"allowIp" json:"allowIp"` //允许调用的IP地址
+
 	CreateTime string `json:"createTime"` //企业创建时间
 }

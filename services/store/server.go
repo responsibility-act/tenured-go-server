@@ -7,6 +7,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
+	"github.com/ihaiker/tenured-go-server/services"
 	"github.com/kataras/iris/core/errors"
 )
 
@@ -18,7 +19,7 @@ type storeServer struct {
 	accountServer api.AccountService
 }
 
-func (this *storeServer) initTenuredServer() (err error) {
+func (this *storeServer) startTenuredServer() (err error) {
 	if this.address, err = this.config.Tcp.GetAddress(); err != nil {
 		return err
 	}
@@ -44,7 +45,8 @@ func (this *storeServer) initTenuredServer() (err error) {
 	return this.server.Start()
 }
 
-func (this *storeServer) initRegistry() error {
+func (this *storeServer) startRegistry() error {
+	//获取注册中心
 	pluginsConfig, err := registry.ParseConfig(this.config.Registry.Address)
 	if err != nil {
 		return err
@@ -65,11 +67,16 @@ func (this *storeServer) initRegistry() error {
 		}
 	}
 
+	clusterId := services.NewClusterID(this.config.WorkDir, this.registry)
+
 	if serverInstance, err := plugins.Instance(this.config.Registry.Attributes); err != nil {
 		return err
 	} else {
 		serverInstance.Name = this.config.Prefix + "_store"
-		serverInstance.Id = "4787dc7f-6a0f-41a6-92d6-d0c15e4a4c30" //TODO 这里的管理器需要修改
+		serverInstance.Id, err = clusterId.Id(serverInstance.Name)
+		if err != nil {
+			return err
+		}
 		serverInstance.Address = this.address
 		serverInstance.Metadata = this.config.Registry.Metadata
 		serverInstance.Tags = this.config.Registry.Tags
@@ -77,16 +84,18 @@ func (this *storeServer) initRegistry() error {
 		if err := this.registry.Register(*serverInstance); err != nil {
 			return err
 		}
+
+		err = clusterId.CheckAndWrite(serverInstance.Name, serverInstance.Id)
 	}
-	return nil
+	return err
 }
 
 func (this *storeServer) Start() error {
 	logger.Info("start store server.")
-	if err := this.initTenuredServer(); err != nil {
+	if err := this.startTenuredServer(); err != nil {
 		return err
 	}
-	if err := this.initRegistry(); err != nil {
+	if err := this.startRegistry(); err != nil {
 		return err
 	}
 	return nil

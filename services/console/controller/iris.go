@@ -38,24 +38,12 @@ func NewHttpServer(http string) *HttpServer {
 func init() {
 	log, _ = logs.GetLogger("console")
 
-	requestLogger := logger.New(logger.Config{
-		// Status displays status code
-		Status: true,
-		// IP displays request's remote address
-		IP: true,
-		// Method displays the http method
-		Method: true,
-		// Path displays the request path
-		Path: true,
-		// Query appends the url query to the Path.
-		Query: true,
-		// if !empty then its contents derives from `ctx.Values().Get("logger_message")
-		// will be added to the logs.
-		//MessageContextKeys: []string{"logger_message"},
-		// if !empty then its contents derives from `ctx.GetHeader("User-Agent")
-		//MessageHeaderKeys: []string{"User-Agent"},
-	})
+	loggerConfig := logger.DefaultConfig()
+	loggerConfig.Query = true
+	requestLogger := logger.New(loggerConfig)
 	app.Use(requestLogger)
+
+	app.Logger().SetOutput(log.Out)
 
 	app.Get("/health", func(ctx ctx.Context) {
 		ctx.JSON(map[string]interface{}{"status": "UP"})
