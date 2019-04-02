@@ -1,7 +1,6 @@
 package remoting
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ type TestHandler struct {
 }
 
 func (h *TestHandler) OnMessage(c RemotingChannel, msg interface{}) {
-	logrus.Infof("OnMessage %s : msg:%v", c.RemoteAddr(), string(msg.([]byte)))
+	logger().Infof("OnMessage %s : msg:%v", c.RemoteAddr(), string(msg.([]byte)))
 }
 
 var client = NewRemotingClient(nil)

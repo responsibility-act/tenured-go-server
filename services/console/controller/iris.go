@@ -36,7 +36,7 @@ func NewHttpServer(http string) *HttpServer {
 }
 
 func init() {
-	log, _ = logs.GetLogger("console")
+	log = logs.GetLogger("console")
 
 	loggerConfig := logger.DefaultConfig()
 	loggerConfig.Query = true

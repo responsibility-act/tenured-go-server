@@ -5,7 +5,6 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/kataras/iris/core/errors"
-	"github.com/sirupsen/logrus"
 	"reflect"
 	"time"
 )
@@ -22,11 +21,11 @@ type InvokeMethod struct {
 }
 
 func (this *InvokeMethod) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
-	logrus.Error("handler error: ", err)
+	logger().Error("handler error: ", err)
 	response := NewACK(request.id)
 	response.RemotingError(ErrorHandler(err))
 	if err := channel.Write(response, time.Second*3); err != nil {
-		logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+		logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 	}
 }
 
@@ -41,7 +40,7 @@ func (this *InvokeMethod) invoke0() TenuredCommandProcesser {
 
 		values := this.method.Func.Call([]reflect.Value{reflect.ValueOf(this.server), reflect.ValueOf(request)})
 		if err := channel.Write(values[0], time.Second*3); err != nil {
-			logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }
@@ -72,7 +71,7 @@ func (this *InvokeMethod) invoke1() TenuredCommandProcesser {
 			}
 		}
 		if err := channel.Write(response, time.Second*3); err != nil {
-			logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }
@@ -108,7 +107,7 @@ func (this *InvokeMethod) invoke2() TenuredCommandProcesser {
 			}
 		}
 		if err := channel.Write(response, time.Second*3); err != nil {
-			logrus.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }

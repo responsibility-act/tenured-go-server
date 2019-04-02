@@ -3,7 +3,6 @@ package remoting
 import (
 	"errors"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"strconv"
@@ -141,7 +140,7 @@ func (this *defChannel) Do(onClose func(channel RemotingChannel)) error {
 
 func (this *defChannel) Close() {
 	this.closeOnce.Do(func() {
-		logrus.Debugf("close channel: %s", this.RemoteAddr())
+		logger().Infof("channel close: %s", this.RemoteAddr())
 		this.idleTimer.Stop()
 		this.handler.OnClose(this)
 		if this.onCloseFn != nil {
@@ -165,10 +164,11 @@ func (this *defChannel) closeUnWriteMessageChan() {
 
 func (this *defChannel) writeLoop() {
 	defer func() {
+		defer logger().Debug("channel close write loop", this.RemoteAddr())
 		this.closeUnWriteMessageChan()
 		this.Close()
 	}()
-	logrus.Debug("start write loop:", this.RemoteAddr())
+	logger().Debug("channel start write loop:", this.RemoteAddr())
 
 	for {
 		select {
@@ -187,8 +187,11 @@ func (this *defChannel) writeLoop() {
 }
 
 func (this *defChannel) readLoop() {
-	defer this.Close()
-	logrus.Debug("start read loop:", this.RemoteAddr())
+	defer func() {
+		logger().Debug("channel close read loop:", this.RemoteAddr())
+		this.Close()
+	}()
+	logger().Debug("channel start read loop:", this.RemoteAddr())
 	for {
 		select {
 		case <-this.closeChan:
@@ -196,7 +199,7 @@ func (this *defChannel) readLoop() {
 		default:
 			if msg, err := this.decoderMessage(this.conn); err != nil {
 				if err != io.EOF && err != io.ErrUnexpectedEOF {
-					logrus.Errorf("channel %s decoder error: %s ", this.RemoteAddr(), err)
+					logger().Errorf("channel %s decoder error: %s ", this.RemoteAddr(), err)
 				}
 				return
 			} else if msg == nil {
@@ -259,7 +262,8 @@ func (this *defChannel) resetReadIdle() {
 }
 
 func (this *defChannel) heartbeatLoop() {
-	logrus.Debug("start heartbeat loop: ", this.RemoteAddr())
+	defer logger().Debug("channel close heartbeat loop", this.RemoteAddr())
+	logger().Debug("start heartbeat loop: ", this.RemoteAddr())
 	defer this.Close()
 
 	idleCheckTime := this.heartbeatTimeout()
@@ -270,12 +274,12 @@ func (this *defChannel) heartbeatLoop() {
 		case t := <-this.idleTimer.C:
 			timestr := t.Format("2006-01-02 15:04:05")
 			if this.idleTimeout+1 <= this.config.IdleTimeout {
-				logrus.Debugf("SendIdle to: %s, time: %s", this.RemoteAddr(), timestr)
+				logger().Debugf("SendIdle to: %s, time: %s", this.RemoteAddr(), timestr)
 				this.idleTimeout = this.idleTimeout + 1
 				this.idleTimer.Reset(idleCheckTime)
 				this.handler.OnIdle(this)
 			} else {
-				logrus.Debugf("IdleTimerOut: %s, %s", this.RemoteAddr(), timestr)
+				logger().Debugf("IdleTimerOut: %s, %s", this.RemoteAddr(), timestr)
 				return
 			}
 		}

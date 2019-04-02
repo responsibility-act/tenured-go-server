@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/kataras/iris/core/errors"
 	"github.com/satori/go.uuid"
@@ -20,7 +21,15 @@ type ClusterID struct {
 	clusterIdFile *commons.File
 }
 
+func (this *ClusterID) cutPrefix(serverName string) string {
+	if strings.HasPrefix(serverName, mixins.ServerPrefix) {
+		return strings.Replace(serverName, mixins.ServerPrefix+"_", "", 1)
+	}
+	return serverName
+}
+
 func (this *ClusterID) Id(serverName string) (string, error) {
+	serverName = this.cutPrefix(serverName)
 	this.clusterIdFile = commons.NewFile(this.workDir + fmt.Sprintf("/%s.cid", serverName))
 	if this.clusterIdFile.Exist() {
 		return this.clusterIdFile.ToString()
@@ -32,19 +41,21 @@ func (this *ClusterID) Id(serverName string) (string, error) {
 		clusterID := len(ss)
 		uuidObj, _ := uuid.NewV4()
 		uuidString := strings.ReplaceAll(uuidObj.String(), "-", "")
-		id := fmt.Sprintf("1-%04X-%s", clusterID, uuidString)
+		id := fmt.Sprintf("1%04X%s", clusterID, uuidString)
 		return id, nil
 	}
 }
 
 func (this *ClusterID) CheckAndWrite(serverName string, clusterId string) error {
+	serverName = this.cutPrefix(serverName)
+
 	if ss, err := this.reg.Lookup(serverName, nil); err != nil {
 		return err
 	} else {
 		clusterZone := map[string]interface{}{}
 		for _, v := range ss {
 			clusterId := v.Id
-			zoneId := clusterId[2:6]
+			zoneId := clusterId[1:5]
 			if _, has := clusterZone[zoneId]; has {
 				return errors.New("double or more zoneId: " + zoneId)
 			}

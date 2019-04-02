@@ -17,6 +17,9 @@ type storeServer struct {
 	server        *protocol.TenuredServer
 	registry      registry.ServiceRegistry
 	accountServer api.AccountService
+
+	//需要执行关闭的服务
+	shutdowns map[commons.Service]interface{}
 }
 
 func (this *storeServer) startTenuredServer() (err error) {
@@ -34,14 +37,12 @@ func (this *storeServer) startTenuredServer() (err error) {
 		Attributes: this.config.Tcp.Attributes,
 	}
 
-	if this.accountServer, err = handlerAccountServer(this.config, this.server); err != nil {
+	if this.accountServer, err = NewAccountServer(this.config, this.server); err != nil {
+		return err
+	} else if err = this.addIfService(this.accountServer); err != nil {
 		return err
 	}
-	if ss, ok := this.accountServer.(commons.Service); ok {
-		if err = ss.Start(); err != nil {
-			return err
-		}
-	}
+
 	return this.server.Start()
 }
 
@@ -67,6 +68,7 @@ func (this *storeServer) startRegistry() error {
 		}
 	}
 
+	//获取集群ID
 	clusterId := services.NewClusterID(this.config.WorkDir, this.registry)
 
 	if serverInstance, err := plugins.Instance(this.config.Registry.Attributes); err != nil {
@@ -90,6 +92,16 @@ func (this *storeServer) startRegistry() error {
 	return err
 }
 
+func (this *storeServer) addIfService(obj interface{}) error {
+	if service, match := obj.(commons.Service); match {
+		if err := service.Start(); err != nil {
+			return err
+		}
+		this.shutdowns[service] = nil
+	}
+	return nil
+}
+
 func (this *storeServer) Start() error {
 	logger.Info("start store server.")
 	if err := this.startTenuredServer(); err != nil {
@@ -103,6 +115,11 @@ func (this *storeServer) Start() error {
 
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
+
+	for k, _ := range this.shutdowns {
+		k.Shutdown(interrupt)
+	}
+
 	if ss, ok := this.accountServer.(commons.Service); ok {
 		ss.Shutdown(false)
 	}
@@ -113,5 +130,5 @@ func (this *storeServer) Shutdown(interrupt bool) {
 }
 
 func newStoreServer(config *storeConfig) *storeServer {
-	return &storeServer{config: config}
+	return &storeServer{config: config, shutdowns: map[commons.Service]interface{}{}}
 }

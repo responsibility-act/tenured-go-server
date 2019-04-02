@@ -15,13 +15,13 @@ type rangeLoadBalance struct {
 }
 
 func (this *rangeLoadBalance) Select(serverName string, obj interface{}, registry ServiceRegistry) ([]ServerInstance, error) {
-	currendRangeIndex := this.rangeIndex.GetAndIncrement()
+	currentRangeIndex := this.rangeIndex.GetAndIncrement()
 	if ss, err := registry.Lookup(serverName, nil); err != nil {
 		return nil, err
 	} else if len(ss) == 0 {
 		return ss, err
 	} else {
-		idx := int(currendRangeIndex % uint32(len(ss)))
+		idx := int(currentRangeIndex % uint32(len(ss)))
 		return []ServerInstance{ss[idx]}, nil
 	}
 }

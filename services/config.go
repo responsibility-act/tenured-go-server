@@ -41,10 +41,11 @@ func (this *Executors) Get(key string, def int) int {
 }
 
 type Logs struct {
-	Level   string `json:"level" yaml:"level"`
-	Path    string `json:"path" yaml:"path"`
-	Output  string `json:"Output" yaml:"Output"` //stdout,file
-	Archive bool   `json:"archive" yaml:"archive"`
+	Level   string            `json:"level" yaml:"level"`
+	Path    string            `json:"path" yaml:"path"`
+	Output  string            `json:"Output" yaml:"Output"` //stdout,file
+	Archive bool              `json:"archive" yaml:"archive"`
+	Loggers map[string]string `json:"loggers" yaml:"loggers"`
 }
 
 func SearchServerConfig(serverName string) []string {
@@ -97,8 +98,10 @@ func LoadServerConfig(server, configFile string, configObj interface{}) error {
 			if err := LoadConfig(searchConfig, configObj); err == nil {
 				logrus.Info("use config file: ", searchConfig)
 				return nil
+			} else if !strings.Contains(err.Error(), "the config not found") {
+				return err
 			} else {
-				logrus.Debugf("config file %s error: %s", searchConfig, err)
+				logrus.Debugf(err.Error())
 			}
 		}
 		return errors.New("any config found ! \n\t" + strings.Join(searchConfigs, "\n\t"))

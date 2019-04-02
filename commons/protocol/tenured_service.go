@@ -6,7 +6,6 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/future"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
-	"github.com/sirupsen/logrus"
 	"reflect"
 	"time"
 )
@@ -45,7 +44,7 @@ func (this *tenuredService) Invoke(channel string, command *TenuredCommand, time
 	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
 
 	if err := this.remoting.SendTo(channel, command, timeout); err != nil {
-		logrus.Debugf("send %d error: %v", requestId, err)
+		logger().Debugf("send %d error: %v", requestId, err)
 		delete(this.responseTables, requestId)
 		return nil, err
 	} else {
@@ -75,11 +74,11 @@ func (this *tenuredService) AsyncInvoke(channel string, command *TenuredCommand,
 
 	this.remoting.SyncSendTo(channel, command, timeout, func(err error) {
 		if err != nil {
-			logrus.Debugf("async send %d error", requestId)
+			logger().Debugf("async send %d error", requestId)
 			callback(nil, err)
 			delete(this.responseTables, requestId)
 		} else {
-			logrus.Debugf("async send %d error", requestId)
+			logger().Debugf("async send %d error", requestId)
 		}
 	})
 
@@ -117,19 +116,19 @@ func (this *tenuredService) makeAck(channel remoting.RemotingChannel, requestCom
 		if remoting.IsRemotingError(err, remoting.ErrClosed) {
 			return
 		}
-		logrus.Warnf("send ack error: %s", err.Error())
+		logger().Warnf("send ack error: %s", err.Error())
 	}
 }
 
 func (this *tenuredService) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if command.code == REQUEST_CODE_IDLE {
-		logrus.Debug("receiver idle ", channel.RemoteAddr())
+		logger().Debug("receiver idle ", channel.RemoteAddr())
 		this.makeAck(channel, command, nil, nil)
 		return
 	} else if processRunner, has := this.commandProcesser[command.code]; has {
 		processRunner.onCommand(channel, command)
 	} else {
-		logrus.Warn("not found process: ", command.code)
+		logger().Warn("not found process: ", command.code)
 	}
 }
 
@@ -152,7 +151,7 @@ func (this *tenuredService) OnIdle(channel remoting.RemotingChannel) {
 		if remoting.IsRemotingError(err, remoting.ErrClosed) {
 			return
 		}
-		logrus.Warnf("send %s idle error: %v", channel.RemoteAddr(), err)
+		logger().Warnf("send %s idle error: %v", channel.RemoteAddr(), err)
 	}
 }
 

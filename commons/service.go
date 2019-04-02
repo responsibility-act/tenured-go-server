@@ -17,6 +17,12 @@ type Service interface {
 	Shutdown(interrupt bool)
 }
 
+func ShutdownIfService(obj interface{}, interrupt bool) {
+	if service, match := obj.(Service); match {
+		service.Shutdown(interrupt)
+	}
+}
+
 type ServerStatus uint32
 
 func (this *ServerStatus) i() uint32 {

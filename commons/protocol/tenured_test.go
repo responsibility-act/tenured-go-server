@@ -3,7 +3,6 @@ package protocol
 import (
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -36,7 +35,7 @@ func startServer() *TenuredServer {
 	server.RegisterCommandProcesser(HEADER, func(channel remoting.RemotingChannel, command *TenuredCommand) {
 		ack := NewACK(command.ID())
 		if err := ack.SetHeader(map[string]string{"hello": "tenured"}); err != nil {
-			logrus.Error(err)
+			logger().Error(err)
 		} else {
 			_ = channel.Write(ack, time.Second)
 		}
@@ -61,8 +60,6 @@ func startCleint() *TenuredClient {
 }
 
 func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-
 	server = startServer()
 	client = startCleint()
 }

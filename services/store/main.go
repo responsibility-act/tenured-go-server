@@ -32,17 +32,14 @@ var StoreCmd = &cobra.Command{
 			return err
 		}
 
-		if debug, err := cmd.Root().PersistentFlags().GetBool("debug"); err == nil && debug {
-			storeCfg.Logs.Level = "debug"
-		}
-
-		if logger, err = logs.InitLogger(
-			"store",
-			storeCfg.Logs.Output, storeCfg.Logs.Level,
-			storeCfg.Logs.Path, storeCfg.Logs.Archive,
+		if err = logs.InitLogger(
+			storeCfg.Logs.Loggers,
+			storeCfg.Logs.Level, storeCfg.Logs.Output, storeCfg.Logs.Path,
+			storeCfg.Logs.Archive,
 		); err != nil {
 			return err
 		}
+		logger = logs.GetLogger("store")
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {

@@ -3,7 +3,6 @@ package protocol
 import (
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
-	"github.com/sirupsen/logrus"
 )
 
 type TenuredCommandProcesser func(channel remoting.RemotingChannel, request *TenuredCommand)
@@ -15,7 +14,7 @@ type tenuredCommandRunner struct {
 
 func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if this.process == nil {
-		logrus.Warnf("can't found command(%d) process", command.code)
+		logger().Warnf("can't found command(%d) process", command.code)
 		return
 	}
 
@@ -23,7 +22,7 @@ func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, co
 		if err := this.executorService.Execute(func() {
 			this.process(channel, command)
 		}); err != nil {
-			logrus.Errorf("command is error: %v", err)
+			logger().Errorf("command is error: %v", err)
 		}
 	} else {
 		this.process(channel, command)
