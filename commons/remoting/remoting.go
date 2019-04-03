@@ -130,7 +130,7 @@ func (this *remotingImpl) getChannel(address string, timeout time.Duration) (Rem
 
 func (this *remotingImpl) newChannel(address string, conn *net.TCPConn) (RemotingChannel, error) {
 	this.waitGroup.Add(1)
-	logger().Debugf("new channel：%s", address)
+	logger.Debugf("new channel：%s", address)
 
 	channel := NewChannel(conn, this.config)
 	channel.addr = address
@@ -164,7 +164,7 @@ func (this *remotingImpl) closeChannels() {
 func (this *remotingImpl) Shutdown(interrupt bool) {
 	this.status.Shutdown(func() {
 		this.waitGroup.Add(1)
-		logger().Infof("turn off remoting")
+		logger.Infof("turn off remoting")
 		if hock, has := this.hocks[HOCK_SHUTDOWN_BEFORE]; has {
 			hock()
 		}
@@ -173,7 +173,7 @@ func (this *remotingImpl) Shutdown(interrupt bool) {
 			hock()
 		}
 		this.closeChannels()
-		logger().Infof("remoting has stopped.")
+		logger.Infof("remoting has stopped.")
 		this.waitGroup.Done()
 	})
 	this.waitGroup.Wait()

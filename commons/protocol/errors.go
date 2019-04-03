@@ -42,5 +42,8 @@ func ErrorInvalidHeader(err error) *TenuredError {
 }
 
 func ErrorHandler(err error) *TenuredError {
+	if err == nil {
+		return nil
+	}
 	return &TenuredError{Code: "9999", Message: err.Error()}
 }

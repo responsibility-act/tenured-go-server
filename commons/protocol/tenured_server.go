@@ -13,10 +13,10 @@ type TenuredServer struct {
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {
 	if command.code == REQUEST_CODE_ATUH {
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
-			logger().Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
+			logger.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
 			this.makeAck(channel, command, nil, ErrorInvalidAuth())
 		} else {
-			logger().Infof("channel(%s) auth success", channel.RemoteAddr())
+			logger.Debugf("channel(%s) auth success", channel.RemoteAddr())
 			this.makeAck(channel, command, this.AuthHeader, nil)
 		}
 		return

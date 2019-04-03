@@ -35,7 +35,7 @@ func startServer() *TenuredServer {
 	server.RegisterCommandProcesser(HEADER, func(channel remoting.RemotingChannel, command *TenuredCommand) {
 		ack := NewACK(command.ID())
 		if err := ack.SetHeader(map[string]string{"hello": "tenured"}); err != nil {
-			logger().Error(err)
+			logger.Error(err)
 		} else {
 			_ = channel.Write(ack, time.Second)
 		}

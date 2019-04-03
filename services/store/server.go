@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
@@ -12,14 +11,12 @@ import (
 )
 
 type storeServer struct {
-	config        *storeConfig
-	address       string
-	server        *protocol.TenuredServer
-	registry      registry.ServiceRegistry
-	accountServer api.AccountService
+	config   *storeConfig
+	address  string
+	server   *protocol.TenuredServer
+	registry registry.ServiceRegistry
 
-	//需要执行关闭的服务
-	shutdowns map[commons.Service]interface{}
+	serviceWappers *ServicesWapper
 }
 
 func (this *storeServer) startTenuredServer() (err error) {
@@ -37,10 +34,9 @@ func (this *storeServer) startTenuredServer() (err error) {
 		Attributes: this.config.Tcp.Attributes,
 	}
 
-	if this.accountServer, err = NewAccountServer(this.config, this.server); err != nil {
-		return err
-	} else if err = this.addIfService(this.accountServer); err != nil {
-		return err
+	this.serviceWappers.SetTCPServer(this.server)
+	if err = this.serviceWappers.Start(); err != nil {
+		return
 	}
 
 	return this.server.Start()
@@ -60,12 +56,6 @@ func (this *storeServer) startRegistry() error {
 
 	if this.registry, err = plugins.Registry(*pluginsConfig); err != nil {
 		return err
-	}
-
-	if ss, ok := this.registry.(commons.Service); ok {
-		if err := ss.Start(); err != nil {
-			return err
-		}
 	}
 
 	//获取集群ID
@@ -92,16 +82,6 @@ func (this *storeServer) startRegistry() error {
 	return err
 }
 
-func (this *storeServer) addIfService(obj interface{}) error {
-	if service, match := obj.(commons.Service); match {
-		if err := service.Start(); err != nil {
-			return err
-		}
-		this.shutdowns[service] = nil
-	}
-	return nil
-}
-
 func (this *storeServer) Start() error {
 	logger.Info("start store server.")
 	if err := this.startTenuredServer(); err != nil {
@@ -115,20 +95,11 @@ func (this *storeServer) Start() error {
 
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
-
-	for k, _ := range this.shutdowns {
-		k.Shutdown(interrupt)
-	}
-
-	if ss, ok := this.accountServer.(commons.Service); ok {
-		ss.Shutdown(false)
-	}
-	if ss, ok := this.registry.(commons.Service); ok {
-		ss.Shutdown(false)
-	}
-	this.server.Shutdown(false)
+	commons.ShutdownIfService(this.registry, interrupt)
+	this.serviceWappers.Shutdown(interrupt)
+	this.server.Shutdown(interrupt)
 }
 
 func newStoreServer(config *storeConfig) *storeServer {
-	return &storeServer{config: config, shutdowns: map[commons.Service]interface{}{}}
+	return &storeServer{config: config, serviceWappers: NewServicesWapper(config)}
 }

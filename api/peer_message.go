@@ -1,4 +1,15 @@
-package command
+package api
+
+/*
+	客户端连接认证信息
+*/
+type AuthHeader struct {
+	AppId   string `json:"appID"`   //应用ID
+	AppAK   string `json:"appAK"`   //应用AK
+	Token   string `json:"token"`   //登录需要的token
+	CloudID string `json:"cloudID"` //用户ID
+	Sign    string `json:"sign"`    //安全校验值
+}
 
 type NotifyMode int
 
@@ -38,4 +49,20 @@ type OfflinePush struct {
 	 * 设置当前消息的扩展字段（可选，发送消息的时候设置）
 	 */
 	Ext string `json:"ext,omitempty"`
+}
+
+type commonsHeader struct {
+	To                string       `json:"to"`                          //消息接收方
+	EnableOfflinePush bool         `json:"enableOfflinePush,omitempty"` //开启离线通知，如果设置OfflinePush将覆盖默认值
+	OfflinePush       *OfflinePush `json:"offlinePush,omitempty"`       //离线推送设置
+}
+
+type PeerTextHeader struct {
+	commonsHeader
+	Text string `json:"text"` //消息内容
+}
+
+type PeerImageHeader struct {
+	commonsHeader
+	Image string `json:"image"` //图片地址
 }

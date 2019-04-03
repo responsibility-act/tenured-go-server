@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-type ServerClient struct {
+type TenuredClientInvoke struct {
 	ServerName  string
 	registry    registry.ServiceRegistry
 	loadBalance registry.LoadBalance
 	client      *TenuredClient
 }
 
-func (this *ServerClient) selectOne(zone interface{}) (instance registry.ServerInstance, retErr *TenuredError) {
+func (this *TenuredClientInvoke) selectOne(zone interface{}) (instance registry.ServerInstance, retErr *TenuredError) {
 	ss, err := this.loadBalance.Select(this.ServerName, zone, this.registry)
 	if err != nil {
 		return instance, ErrorHandler(err)
@@ -24,7 +24,7 @@ func (this *ServerClient) selectOne(zone interface{}) (instance registry.ServerI
 	return ss[0], nil
 }
 
-func (this *ServerClient) Invoke(
+func (this *TenuredClientInvoke) Invoke(
 	code uint16, header interface{}, body []byte, timeout time.Duration, respHeader interface{},
 ) *TenuredError {
 	serverInstance, err := this.selectOne(header)
@@ -51,7 +51,7 @@ func (this *ServerClient) Invoke(
 	return nil
 }
 
-func (this *ServerClient) initTenuredClient() (err error) {
+func (this *TenuredClientInvoke) initTenuredClient() (err error) {
 	if this.client, err = NewTenuredClient(remoting.DefaultConfig()); err != nil {
 		return
 	}
@@ -59,19 +59,19 @@ func (this *ServerClient) initTenuredClient() (err error) {
 	return this.client.Start()
 }
 
-func (this *ServerClient) Start() (err error) {
+func (this *TenuredClientInvoke) Start() (err error) {
 	if err = this.initTenuredClient(); err != nil {
 		return
 	}
 	return nil
 }
 
-func (this *ServerClient) Shutdown(interrupt bool) {
+func (this *TenuredClientInvoke) Shutdown(interrupt bool) {
 	this.client.Shutdown(interrupt)
 }
 
-func NewClient(serverName string, registry registry.ServiceRegistry, loadBalance registry.LoadBalance) *ServerClient {
-	serverClient := &ServerClient{
+func NewClient(serverName string, registry registry.ServiceRegistry, loadBalance registry.LoadBalance) *TenuredClientInvoke {
+	serverClient := &TenuredClientInvoke{
 		ServerName:  serverName,
 		registry:    registry,
 		loadBalance: loadBalance,

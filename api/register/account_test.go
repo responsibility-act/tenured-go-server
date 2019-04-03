@@ -2,14 +2,12 @@ package register
 
 import (
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/api/command"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/kataras/iris/core/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 var reg registry.ServiceRegistry
@@ -30,16 +28,16 @@ func Init() error {
 }
 
 func TestNewAccount(t *testing.T) {
+	commons.ShutdownIfService(server, true)
+
 	err := Init()
 	assert.Nil(t, err)
-	account := &command.Account{}
+	account := &api.Account{}
+	account.ID = "123123"
 	account.Email = "wo@renzhen.la"
-	start := time.Now()
-	for i := 0; i < 1000; i++ {
-		if acc, err := server.Apply(account); err != nil {
-			t.Log(acc, err)
-		}
-	}
-	t.Log(time.Now().UnixNano() - start.UnixNano())
-	server.(commons.Service).Shutdown(true)
+
+	acc, err := server.Apply(account)
+	assert.Nil(t, err)
+
+	t.Log(acc)
 }

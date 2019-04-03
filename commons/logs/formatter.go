@@ -22,8 +22,9 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString("] ")
 
 	if agent, has := entry.Data["agent"]; has {
+		b.WriteString("(")
 		b.WriteString(agent.(string))
-		b.WriteString(" ")
+		b.WriteString(") ")
 		delete(entry.Data, "agent")
 	} else if entry.HasCaller() {
 		if entry.Caller.Function == "github.com/kataras/golog.integrateStdLogger.func1" {

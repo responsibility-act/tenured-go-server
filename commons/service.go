@@ -18,9 +18,44 @@ type Service interface {
 }
 
 func ShutdownIfService(obj interface{}, interrupt bool) {
+	if obj == nil {
+		return
+	}
 	if service, match := obj.(Service); match {
 		service.Shutdown(interrupt)
 	}
+}
+
+type ServiceManager struct {
+	services []Service
+}
+
+func (this *ServiceManager) Add(obj interface{}) {
+	if obj == nil {
+		return
+	}
+	if service, match := obj.(Service); match {
+		this.services = append(this.services, service)
+	}
+}
+
+func (this *ServiceManager) Start() error {
+	for _, v := range this.services {
+		if err := v.Start(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *ServiceManager) Shutdown(interrupt bool) {
+	for _, v := range this.services {
+		v.Shutdown(interrupt)
+	}
+}
+
+func NewServiceManager() *ServiceManager {
+	return &ServiceManager{services: make([]Service, 0)}
 }
 
 type ServerStatus uint32

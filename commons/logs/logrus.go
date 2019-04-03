@@ -8,9 +8,22 @@ import (
 var loggers map[string]*logrus.Logger
 var debug bool
 
+type AgentHock struct {
+	agent string
+}
+
+func (this *AgentHock) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (this *AgentHock) Fire(entry *logrus.Entry) error {
+	entry.Data["agent"] = this.agent
+	return nil
+}
+
 func init() {
 	loggers = map[string]*logrus.Logger{}
-	_ = InitLogger(map[string]string{}, "info", "stdout", "", false)
+	_ = InitLogger(map[string]string{"root": "info"}, "info", "stdout", "", false)
 }
 
 func GetLoggers() map[string]*logrus.Logger {
@@ -27,7 +40,7 @@ func GetLogger(loggerName string) *logrus.Logger {
 	}
 	rootLogger := loggers["root"]
 	logger = logrus.New()
-
+	logger.Hooks.Add(&AgentHock{agent: loggerName})
 	logger.SetReportCaller(true)
 	logger.SetFormatter(rootLogger.Formatter)
 	logger.SetOutput(rootLogger.Out)
@@ -80,20 +93,37 @@ func InitLogger(loggerLevels map[string]string, level, output, file string, arch
 	outputWrite := logrus.StandardLogger().Out
 	formatter := &TextFormatter{}
 
-	if output == "file" {
+	if !debug && output == "file" {
 		if outputWrite, err = NewRollingFileOutput(file, archive); err != nil {
 			return err
 		}
 	}
-	if loggerLevels == nil {
-		loggerLevels = map[string]string{}
+	//default level
+	defLevel, err := logrus.ParseLevel(level)
+	if err != nil {
+		return err
 	}
-	loggerLevels["root"] = level
+
+	//reset realty init logger
+	for _, logger := range loggers {
+		if debug {
+			logger.SetLevel(logrus.DebugLevel)
+		} else {
+			logger.SetLevel(defLevel)
+		}
+		logger.SetReportCaller(true)
+		logger.SetFormatter(formatter)
+		logger.SetOutput(outputWrite)
+	}
+
+	if loggerLevels == nil {
+		return nil
+	}
 
 	for loggerName, levelStr := range loggerLevels {
 		level, err := logrus.ParseLevel(levelStr)
 		if err != nil {
-			return err
+			level = defLevel
 		}
 		logger := loggers[loggerName]
 		if logger == nil {
@@ -112,6 +142,7 @@ func InitLogger(loggerLevels map[string]string, level, output, file string, arch
 		logger.SetReportCaller(true)
 		logger.SetFormatter(formatter)
 		logger.SetOutput(outputWrite)
+		logger.Hooks.Add(&AgentHock{agent: loggerName})
 		loggers[loggerName] = logger
 	}
 	return nil

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type InvokeMethod struct {
+type TenuredServerInvokeMethod struct {
 	//0: func(requestCommand) responseCommand
 	//1: func(header) header,error
 	//2: func(header,body) header,body,error
@@ -20,17 +20,17 @@ type InvokeMethod struct {
 	out    reflect.Type
 }
 
-func (this *InvokeMethod) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
-	logger().Error("handler error: ", err)
+func (this *TenuredServerInvokeMethod) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
+	logger.Error("handler error: ", err)
 	response := NewACK(request.id)
 	response.RemotingError(ErrorHandler(err))
 	if err := channel.Write(response, time.Second*3); err != nil {
-		logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+		logger.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 	}
 }
 
 //0: func(requestCommand) responseCommand
-func (this *InvokeMethod) invoke0() TenuredCommandProcesser {
+func (this *TenuredServerInvokeMethod) invoke0() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -40,13 +40,13 @@ func (this *InvokeMethod) invoke0() TenuredCommandProcesser {
 
 		values := this.method.Func.Call([]reflect.Value{reflect.ValueOf(this.server), reflect.ValueOf(request)})
 		if err := channel.Write(values[0], time.Second*3); err != nil {
-			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }
 
 //1: func(header) header,error
-func (this *InvokeMethod) invoke1() TenuredCommandProcesser {
+func (this *TenuredServerInvokeMethod) invoke1() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -71,13 +71,13 @@ func (this *InvokeMethod) invoke1() TenuredCommandProcesser {
 			}
 		}
 		if err := channel.Write(response, time.Second*3); err != nil {
-			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }
 
 //2: func(header,body) header,body,error
-func (this *InvokeMethod) invoke2() TenuredCommandProcesser {
+func (this *TenuredServerInvokeMethod) invoke2() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -107,12 +107,12 @@ func (this *InvokeMethod) invoke2() TenuredCommandProcesser {
 			}
 		}
 		if err := channel.Write(response, time.Second*3); err != nil {
-			logger().Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
+			logger.Errorf("channel %s write message error: %s", channel.RemoteAddr(), err)
 		}
 	}
 }
 
-func (this *InvokeMethod) Invoke() TenuredCommandProcesser {
+func (this *TenuredServerInvokeMethod) Invoke() TenuredCommandProcesser {
 	switch this.module {
 	case 0:
 		return this.invoke0()
@@ -152,7 +152,7 @@ func (this *TenuredInvoke) Invoke(code uint16, methodName string, executor execu
 		return errors.New("method not found: " + methodName)
 	}
 
-	invokeMethod := &InvokeMethod{server: this.server, method: method}
+	invokeMethod := &TenuredServerInvokeMethod{server: this.server, method: method}
 
 	switch method.Type.NumIn() {
 	case 2:

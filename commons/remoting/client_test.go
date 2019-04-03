@@ -11,7 +11,7 @@ type TestHandler struct {
 }
 
 func (h *TestHandler) OnMessage(c RemotingChannel, msg interface{}) {
-	logger().Infof("OnMessage %s : msg:%v", c.RemoteAddr(), string(msg.([]byte)))
+	logger.Infof("OnMessage %s : msg:%v", c.RemoteAddr(), string(msg.([]byte)))
 }
 
 var client = NewRemotingClient(nil)

@@ -5,7 +5,6 @@ import (
 	"github.com/emirpasic/gods/sets/hashset"
 	"github.com/hashicorp/consul/api"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strconv"
 )
@@ -39,7 +38,7 @@ func (this *ConsulServiceRegistry) Shutdown(interrupt bool) {
 }
 
 func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstance) error {
-	logrus.Infof("To register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
+	logger.Infof("to register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
 	attrs := serverInstance.PluginAttrs.(*ConsulServerAttrs)
 	if host, portStr, err := net.SplitHostPort(serverInstance.Address); err != nil {
 		return err
@@ -70,7 +69,7 @@ func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstan
 }
 
 func (this *ConsulServiceRegistry) Unregister(serverId string) error {
-	logrus.Info("To Unregister ", serverId)
+	logger.Info("To Unregister ", serverId)
 	return this.client.Agent().ServiceDeregister(serverId)
 }
 
@@ -92,10 +91,10 @@ func (this *ConsulServiceRegistry) convertService(serverName string, service *ap
 func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 	defer func() {
 		if e := recover(); e != nil {
-			logrus.Warnf("close subscribe(%s) error: %v", serverName, e)
+			logger.Warnf("close subscribe(%s) error: %v", serverName, e)
 		}
 	}()
-	logrus.Debug("start loop load subscribe server health:", serverName)
+	logger.Debug("start loop load subscribe server health:", serverName)
 
 	waitIndex := uint64(0)
 	healthWaitTime := this.config.HealthWaitTime()

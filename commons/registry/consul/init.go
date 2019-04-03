@@ -1,7 +1,9 @@
 package consul
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -39,6 +41,9 @@ func (this *ConsulRegistryPlugins) Registry(config registry.PluginConfig) (regis
 	return reg, nil
 }
 
+var logger *logrus.Logger
+
 func init() {
+	logger = logs.GetLogger("consul.registry")
 	registry.AddPlugins("consul", &ConsulRegistryPlugins{lock: &sync.Mutex{}})
 }

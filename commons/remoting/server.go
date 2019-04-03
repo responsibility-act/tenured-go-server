@@ -33,7 +33,7 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 		this.waitGroup.Done()
 		this.Shutdown(false)
 	}()
-	logger().Infof("server startup：%s", listener.Addr().String())
+	logger.Infof("server startup：%s", listener.Addr().String())
 
 	acceptTimeout := time.Second * time.Duration(this.config.AcceptTimeout)
 	for {
@@ -47,13 +47,13 @@ func (this *RemotingServer) startListener(listener *net.TCPListener) {
 				if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
 					continue
 				} else {
-					logger().Errorf("Service monitoring error：%s", err)
+					logger.Errorf("Service monitoring error：%s", err)
 					return
 				}
 			}
 			address := conn.RemoteAddr().String()
 			if _, err = this.newChannel(address, conn); err != nil {
-				logger().Infof("the server reject connection. %s", err.Error())
+				logger.Infof("the server reject connection. %s", err.Error())
 			}
 		}
 	}
