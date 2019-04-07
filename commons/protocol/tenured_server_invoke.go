@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type TenuredServerInvokeMethod struct {
+type InvokeHandler struct {
 	//0: func(requestCommand) responseCommand
 	//1: func(header) header,error
 	//2: func(header,body) header,body,error
@@ -20,7 +20,7 @@ type TenuredServerInvokeMethod struct {
 	out    reflect.Type
 }
 
-func (this *TenuredServerInvokeMethod) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
+func (this *InvokeHandler) invokeError(channel remoting.RemotingChannel, request *TenuredCommand, err error) {
 	logger.Error("handler error: ", err)
 	response := NewACK(request.id)
 	response.RemotingError(ErrorHandler(err))
@@ -30,7 +30,7 @@ func (this *TenuredServerInvokeMethod) invokeError(channel remoting.RemotingChan
 }
 
 //0: func(requestCommand) responseCommand
-func (this *TenuredServerInvokeMethod) invoke0() TenuredCommandProcesser {
+func (this *InvokeHandler) invoke0() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -46,7 +46,7 @@ func (this *TenuredServerInvokeMethod) invoke0() TenuredCommandProcesser {
 }
 
 //1: func(header) header,error
-func (this *TenuredServerInvokeMethod) invoke1() TenuredCommandProcesser {
+func (this *InvokeHandler) invoke1() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -77,7 +77,7 @@ func (this *TenuredServerInvokeMethod) invoke1() TenuredCommandProcesser {
 }
 
 //2: func(header,body) header,body,error
-func (this *TenuredServerInvokeMethod) invoke2() TenuredCommandProcesser {
+func (this *InvokeHandler) invoke2() TenuredCommandProcesser {
 	return func(channel remoting.RemotingChannel, request *TenuredCommand) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -112,7 +112,7 @@ func (this *TenuredServerInvokeMethod) invoke2() TenuredCommandProcesser {
 	}
 }
 
-func (this *TenuredServerInvokeMethod) Invoke() TenuredCommandProcesser {
+func (this *InvokeHandler) Invoke() TenuredCommandProcesser {
 	switch this.module {
 	case 0:
 		return this.invoke0()
@@ -123,70 +123,64 @@ func (this *TenuredServerInvokeMethod) Invoke() TenuredCommandProcesser {
 	}
 }
 
-type TenuredInvoke struct {
-	server  interface{}
-	tenured TenuredService
-}
-
-func (this *TenuredInvoke) errors(method reflect.Method) error {
+func methodErrors(method reflect.Method) error {
 	return errors.New("Invoild method: " + method.Name + " " + method.Func.String())
 }
 
-func (this *TenuredInvoke) isBytes(t reflect.Type) bool {
+func isBytes(t reflect.Type) bool {
 	return t == reflect.TypeOf([]byte{})
 }
 
-func (this *TenuredInvoke) isError(t reflect.Type) bool {
+func isError(t reflect.Type) bool {
 	return t == reflect.TypeOf((*TenuredError)(nil))
 }
 
-func (this *TenuredInvoke) isCommand(t reflect.Type) bool {
+func isCommand(t reflect.Type) bool {
 	return t == reflect.TypeOf((*TenuredCommand)(nil))
 }
 
-func (this *TenuredInvoke) Invoke(code uint16, methodName string, executor executors.ExecutorService) error {
-	serverInterface := reflect.TypeOf(this.server)
+func Invoke(
+	tenuredServer *TenuredServer, service interface{},
+	code uint16, methodName string, executor executors.ExecutorService,
+) error {
+	serverInterface := reflect.TypeOf(service)
 
 	method, has := serverInterface.MethodByName(methodName)
 	if !has {
 		return errors.New("method not found: " + methodName)
 	}
 
-	invokeMethod := &TenuredServerInvokeMethod{server: this.server, method: method}
+	invokeMethod := &InvokeHandler{server: service, method: method}
 
 	switch method.Type.NumIn() {
 	case 2:
 		inType := method.Type.In(1)
-		if this.isCommand(inType) {
-			if method.Type.NumOut() != 1 || !this.isCommand(method.Type.Out(0)) {
-				return this.errors(method)
+		if isCommand(inType) {
+			if method.Type.NumOut() != 1 || !isCommand(method.Type.Out(0)) {
+				return methodErrors(method)
 			}
 			invokeMethod.module = 0
 		} else if method.Type.NumOut() == 2 &&
-			method.Type.In(1).Kind() == reflect.Ptr && this.isError(method.Type.Out(1)) {
+			method.Type.In(1).Kind() == reflect.Ptr && isError(method.Type.Out(1)) {
 			invokeMethod.module = 1
 		} else {
-			return this.errors(method)
+			return methodErrors(method)
 		}
 		invokeMethod.in = inType
 	case 3:
 		if method.Type.NumOut() == 3 &&
-			this.isBytes(method.Type.In(2)) &&
-			this.isBytes(method.Type.Out(1)) && this.isError(method.Type.Out(2)) {
+			isBytes(method.Type.In(2)) &&
+			isBytes(method.Type.Out(1)) && isError(method.Type.Out(2)) {
 			invokeMethod.module = 2
 			invokeMethod.in = method.Type.In(1)
 			invokeMethod.out = method.Type.Out(0)
 		} else {
-			return this.errors(method)
+			return methodErrors(method)
 		}
 	default:
-		return this.errors(method)
+		return methodErrors(method)
 	}
 
-	this.tenured.RegisterCommandProcesser(code, invokeMethod.Invoke(), executor)
+	tenuredServer.RegisterCommandProcesser(code, invokeMethod.Invoke(), executor)
 	return nil
-}
-
-func NewInvoke(tenured TenuredService, server interface{}) *TenuredInvoke {
-	return &TenuredInvoke{tenured: tenured, server: server}
 }

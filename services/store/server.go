@@ -16,7 +16,7 @@ type storeServer struct {
 	server   *protocol.TenuredServer
 	registry registry.ServiceRegistry
 
-	serviceWappers *ServicesWapper
+	serviceWappers *ServicesInvoke
 }
 
 func (this *storeServer) startTenuredServer() (err error) {
@@ -34,12 +34,15 @@ func (this *storeServer) startTenuredServer() (err error) {
 		Attributes: this.config.Tcp.Attributes,
 	}
 
-	this.serviceWappers.SetTCPServer(this.server)
-	if err = this.serviceWappers.Start(); err != nil {
+	if err = this.server.Start(); err != nil {
 		return
 	}
 
-	return this.server.Start()
+	this.serviceWappers = NewServicesWapper(this.config, this.server)
+	if err = this.serviceWappers.Start(); err != nil {
+		return
+	}
+	return
 }
 
 func (this *storeServer) startRegistry() error {
@@ -96,10 +99,14 @@ func (this *storeServer) Start() error {
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
 	commons.ShutdownIfService(this.registry, interrupt)
-	this.serviceWappers.Shutdown(interrupt)
-	this.server.Shutdown(interrupt)
+	if this.serviceWappers != nil {
+		this.serviceWappers.Shutdown(interrupt)
+	}
+	if this.server != nil {
+		this.server.Shutdown(interrupt)
+	}
 }
 
 func newStoreServer(config *storeConfig) *storeServer {
-	return &storeServer{config: config, serviceWappers: NewServicesWapper(config)}
+	return &storeServer{config: config}
 }

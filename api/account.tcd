@@ -1,0 +1,56 @@
+imports {
+}
+
+enum AccountStatus {
+    OK //执行成功
+    Apply //申请
+    Return //打回重新提交
+    Deny    //拒绝
+    Disable
+}
+
+//账户信息
+type Account {
+    //申请账户的ID
+	Id string zone
+
+	//企业名称，对接的企业名称
+	Name   string  empty
+
+	//手机号
+	Mobile string
+
+    //允许调用的IP地址
+	AllowIP []string empty
+
+	//申请状态
+    Status  AccountStatus empty
+
+    Attrs   map[string]string empty
+}
+
+type Search {
+    StartIdx string empty
+    Limit int
+}
+
+errors {
+    AccountExists(2001,用户已经存在)
+    AccountNotExists(2002,用户不存在)
+    MobileExists(2003,手机号已被占用)
+}
+
+loadBalance {
+    hash HashLoadBalance
+}
+
+//账户申请接口
+service AccountService(2000) loadBalance(hash) {
+
+    //申请用户
+    Apply(Account) () error(AccountExists,MobileExists)
+
+    //根据用户ID获取用户
+    Get(id string) (Account) error(AccountNotExists)
+
+}

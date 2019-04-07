@@ -1,12 +1,19 @@
 package dao
 
 import (
-	"github.com/golang/leveldb"
-	"github.com/golang/leveldb/db"
+	"encoding/json"
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/comparer"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"os"
 )
+
+var readOptions = &opt.ReadOptions{}
+var writeOptions = &opt.WriteOptions{Sync: true}
+
+const levelDBNotFound = "leveldb: not found"
 
 type AccountServer struct {
 	dataPath string
@@ -17,26 +24,44 @@ func NewAccountServer(dataPath string) *AccountServer {
 	return &AccountServer{dataPath: dataPath}
 }
 
-func (this *AccountServer) Apply(account *api.Account) (*api.Account, *protocol.TenuredError) {
-	b := leveldb.Batch{}
-	b.Set([]byte(account.ID+"-ID"), []byte(account.ID))
-	b.Set([]byte(account.ID+"-NAME"), []byte(account.Name))
-	err := this.data.Apply(b, &db.WriteOptions{Sync: true})
-	if err != nil {
-		return nil, protocol.ErrorHandler(err)
+func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
+	if storeAccount, err := this.Get(account.Id); err != nil {
+		return err
+	} else if storeAccount != nil {
+		return api.ErrAccountExists
 	}
-	return account, nil
+	account.Status = api.AccountStatusApply
+
+	if bs, err := json.Marshal(account); err != nil {
+		return protocol.ErrorDB(err)
+	} else if err := this.data.Put([]byte(account.Id), bs, writeOptions); err != nil {
+		return protocol.ErrorDB(err)
+	}
+
+	return nil
 }
 
-func (this *AccountServer) GetById(id string) (*api.Account, *protocol.TenuredError) {
-	return nil, nil
+func (this *AccountServer) Get(id string) (*api.Account, *protocol.TenuredError) {
+	if val, err := this.data.Get([]byte(id), readOptions); err != nil {
+		if err.Error() == levelDBNotFound {
+			return nil, nil
+		} else {
+			return nil, protocol.ErrorDB(err)
+		}
+	} else {
+		account := &api.Account{}
+		if err := json.Unmarshal(val, account); err != nil {
+			return nil, protocol.ErrorDB(err)
+		}
+		return account, nil
+	}
 }
 
 func (this *AccountServer) Start() (err error) {
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		return
 	}
-	if this.data, err = leveldb.Open(this.dataPath, &db.Options{}); err != nil {
+	if this.data, err = leveldb.OpenFile(this.dataPath, &opt.Options{Comparer: comparer.DefaultComparer}); err != nil {
 		return err
 	}
 	return nil

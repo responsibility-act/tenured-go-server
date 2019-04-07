@@ -3,12 +3,20 @@ package protocol
 import "fmt"
 
 type TenuredError struct {
-	Code    string
-	Message string
+	code    string
+	message string
+}
+
+func (this *TenuredError) Code() string {
+	return this.code
+}
+
+func (this *TenuredError) Is(code string) bool {
+	return this.code == code
 }
 
 func (this *TenuredError) Error() string {
-	return fmt.Sprintf("[%s]%s", this.Code, this.Message)
+	return fmt.Sprintf("[%s]%s", this.code, this.message)
 }
 
 func ConvertError(err error) *TenuredError {
@@ -21,29 +29,41 @@ func ConvertError(err error) *TenuredError {
 
 func ErrorNoAuth() *TenuredError {
 	return &TenuredError{
-		Code: "1000", Message: "not found auth info.",
+		code: "1000", message: "not found auth info.",
 	}
 }
 
 func ErrorInvalidAuth() *TenuredError {
 	return &TenuredError{
-		Code: "1001", Message: "invalid auth",
+		code: "1001", message: "invalid auth",
 	}
 }
 
 func ErrorNoModule() *TenuredError {
 	return &TenuredError{
-		Code: "1002", Message: "Can't found module",
+		code: "1002", message: "Can't found module",
 	}
 }
 
 func ErrorInvalidHeader(err error) *TenuredError {
-	return &TenuredError{Code: "1003", Message: err.Error()}
+	return &TenuredError{code: "1003", message: err.Error()}
+}
+
+func ErrorDB(err error) *TenuredError {
+	return &TenuredError{code: "1004", message: err.Error()}
+}
+
+func ErrorRouter() *TenuredError {
+	return &TenuredError{code: "1005", message: "No valid route"}
+}
+
+func NewError(code, message string) *TenuredError {
+	return &TenuredError{code: code, message: message}
 }
 
 func ErrorHandler(err error) *TenuredError {
 	if err == nil {
 		return nil
 	}
-	return &TenuredError{Code: "9999", Message: err.Error()}
+	return &TenuredError{code: "9999", message: err.Error()}
 }

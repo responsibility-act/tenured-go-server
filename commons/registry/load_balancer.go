@@ -2,21 +2,19 @@ package registry
 
 import "github.com/ihaiker/tenured-go-server/commons/atomic"
 
-type LoadBalanceFragment interface {
-	Fragment() int
-}
-
 type LoadBalance interface {
-	Select(serverName string, obj interface{}, reg ServiceRegistry) ([]ServerInstance, error)
+	Select(obj interface{}) ([]ServerInstance, error)
 }
 
 type rangeLoadBalance struct {
+	serverName string
 	rangeIndex *atomic.AtomicUInt32
+	reg        ServiceRegistry
 }
 
-func (this *rangeLoadBalance) Select(serverName string, obj interface{}, registry ServiceRegistry) ([]ServerInstance, error) {
+func (this *rangeLoadBalance) Select(obj interface{}) ([]ServerInstance, error) {
 	currentRangeIndex := this.rangeIndex.GetAndIncrement()
-	if ss, err := registry.Lookup(serverName, nil); err != nil {
+	if ss, err := this.reg.Lookup(this.serverName, nil); err != nil {
 		return nil, err
 	} else if len(ss) == 0 {
 		return ss, err
@@ -26,6 +24,9 @@ func (this *rangeLoadBalance) Select(serverName string, obj interface{}, registr
 	}
 }
 
-func NewRangeLoadBalance() LoadBalance {
-	return &rangeLoadBalance{rangeIndex: atomic.NewUint32(0)}
+func NewRangeLoadBalance(serverName string, reg ServiceRegistry) LoadBalance {
+	return &rangeLoadBalance{
+		serverName: serverName, reg: reg,
+		rangeIndex: atomic.NewUint32(0),
+	}
 }

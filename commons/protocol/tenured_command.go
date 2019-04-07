@@ -99,19 +99,19 @@ func (this *TenuredCommand) Error(error, message string) *TenuredCommand {
 
 func (this *TenuredCommand) RemotingError(error *TenuredError) *TenuredCommand {
 	if error != nil {
-		return this.Error(error.Code, error.Message)
+		return this.Error(error.code, error.message)
 	} else {
 		return this
 	}
 }
 
-func (this *TenuredCommand) GetError() error {
+func (this *TenuredCommand) GetError() *TenuredError {
 	if !this.IsACK() || this.IsSuccess() {
 		return nil
 	}
 	return &TenuredError{
-		Code:    string(this.header),
-		Message: string(this.Body),
+		code:    string(this.header),
+		message: string(this.Body),
 	}
 }
 

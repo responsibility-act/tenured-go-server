@@ -16,6 +16,8 @@ import:
     version: ~0.0.3
   - package: github.com/go-yaml/yaml
     version: ~2.2.2
+  - package: github.com/syndtr/goleveldb
+    version: ~c3a204f8e96543bb0cc090385c001078f184fc46
 
 testImport:
   - package: github.com/stretchr/testify

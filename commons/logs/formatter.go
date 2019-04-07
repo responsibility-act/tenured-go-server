@@ -21,12 +21,15 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.WriteString(entry.Level.String())
 	b.WriteString("] ")
 
-	if agent, has := entry.Data["agent"]; has {
+	agent, hasAgent := entry.Data["agent"]
+	if hasAgent {
 		b.WriteString("(")
 		b.WriteString(agent.(string))
 		b.WriteString(") ")
 		delete(entry.Data, "agent")
-	} else if entry.HasCaller() {
+	}
+
+	if (uint32(entry.Level) < uint32(logrus.InfoLevel) || !hasAgent) && entry.HasCaller() {
 		if entry.Caller.Function == "github.com/kataras/golog.integrateStdLogger.func1" {
 			entry.Caller.Function = "iris"
 			entry.Caller.File = "iris"
@@ -34,15 +37,13 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			if idx := strings.LastIndex(entry.Caller.Function, "/"); idx > 0 {
 				entry.Caller.Function = entry.Caller.Function[idx+1:]
 			}
-		}
-		if idx := strings.LastIndex(entry.Caller.File, "/"); idx > 0 {
-			entry.Caller.File = entry.Caller.File[idx+1:]
+			if idx := strings.Index(entry.Caller.File, "/src/"); idx > 0 {
+				entry.Caller.File = entry.Caller.File[idx+5:]
+			}
 		}
 
-		if entry.Level == logrus.ErrorLevel {
-			b.WriteString(fmt.Sprintf("%s(%s:%d) ",
-				entry.Caller.Function, entry.Caller.File, entry.Caller.Line))
-		}
+		b.WriteString(fmt.Sprintf("%s:%d %s ",
+			entry.Caller.File, entry.Caller.Line, entry.Caller.Function))
 	}
 	if len(entry.Data) > 0 {
 		b.WriteString("{ ")

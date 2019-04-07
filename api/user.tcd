@@ -1,0 +1,54 @@
+
+enum UserType(int) {
+
+    //正常用户
+    Normal = 0
+
+    //客服用户
+    Kefu = 1
+}
+
+type User {
+    //应用ID
+	AppID string
+
+	//云用户ID
+	CloudID string zone
+
+    //第三方系统ID，不允许修改、不允许超过32位
+	UserId string
+
+	//用户昵称，可以用于搜索
+	NickName string empty
+
+	//用户头像
+	Face string empty
+
+	//用户属性
+	Attrs  map[string]string  empty
+
+	//用户类型
+	Type UserType
+}
+
+type ClusterId {
+    Id string
+}
+
+type SearchUser {
+    AppID string empty
+    Name string empty
+}
+
+loadBalance {
+    hash HashLoadBalance
+}
+
+service UserService(3000) loadBalance(hash) {
+
+    AddOrUpdateUser(user User) ()
+
+    Get(id string) (User)
+}
+
+

@@ -37,7 +37,7 @@ type tenuredService struct {
 
 func (this *tenuredService) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
 	if !this.remoting.IsActive() {
-		return nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"}
+		return nil, &TenuredError{code: remoting.ErrClosed.String(), message: "closed"}
 	}
 	requestId := command.id
 	responseFuture := future.Set()
@@ -65,7 +65,7 @@ func (this *tenuredService) AsyncInvoke(channel string, command *TenuredCommand,
 	callback func(tenuredCommand *TenuredCommand, err error)) {
 
 	if !this.remoting.IsActive() {
-		callback(nil, &TenuredError{Code: remoting.ErrClosed.String(), Message: "closed"})
+		callback(nil, &TenuredError{code: remoting.ErrClosed.String(), message: "closed"})
 		return
 	}
 	requestId := command.id
@@ -181,7 +181,7 @@ func (this *tenuredService) waitRequest(interrupt bool) {
 			if len(this.responseTables) == 0 {
 				return
 			}
-			<-time.After(time.Millisecond * 200)
+			<-time.After(time.Millisecond * 10)
 		}
 	}
 }

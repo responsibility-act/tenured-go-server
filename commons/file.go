@@ -1,7 +1,9 @@
 package commons
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,7 +38,7 @@ func (self *File) Name() string {
 
 func (self *File) Mkdir() error {
 	if self.Exist() {
-		return errors.New("the fodler or file is exits")
+		return nil
 	}
 	return os.Mkdir(self.path, os.ModePerm)
 }
@@ -115,4 +117,23 @@ func (self *File) GetReader() (*os.File, error) {
 		return os.OpenFile(self.path, (os.O_RDWR | os.O_APPEND), 0666)
 	}
 	return nil, errors.New("not found or is not file")
+}
+
+func (self *File) Lines() ([]string, error) {
+	if r, err := self.GetReader(); err != nil {
+		return nil, err
+	} else {
+		reader := bufio.NewReader(r)
+		lines := make([]string, 0)
+		for {
+			if line, _, err := reader.ReadLine(); err == nil {
+				lines = append(lines, string(line))
+			} else if err == io.EOF {
+				break
+			} else {
+				return nil, err
+			}
+		}
+		return lines, nil
+	}
 }

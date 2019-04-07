@@ -1,54 +1,41 @@
 package protocol
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"time"
 )
 
 type TenuredClientInvoke struct {
-	ServerName  string
-	registry    registry.ServiceRegistry
-	loadBalance registry.LoadBalance
-	client      *TenuredClient
-}
-
-func (this *TenuredClientInvoke) selectOne(zone interface{}) (instance registry.ServerInstance, retErr *TenuredError) {
-	ss, err := this.loadBalance.Select(this.ServerName, zone, this.registry)
-	if err != nil {
-		return instance, ErrorHandler(err)
-	} else if len(ss) == 0 || !registry.IsOK(ss[0]) {
-		return instance, ErrorHandler(commons.Error("no active server"))
-	}
-	return ss[0], nil
+	client *TenuredClient
 }
 
 func (this *TenuredClientInvoke) Invoke(
+	serverInstance registry.ServerInstance,
 	code uint16, header interface{}, body []byte, timeout time.Duration, respHeader interface{},
-) *TenuredError {
-	serverInstance, err := this.selectOne(header)
-	if err != nil {
-		return err
-	}
+) ([]byte, *TenuredError) {
 	request := NewRequest(code)
 	if header != nil {
-		_ = request.SetHeader(header)
+		if err := request.SetHeader(header); err != nil {
+			return nil, ConvertError(err)
+		}
 	}
 	if body != nil {
 		request.Body = body
 	}
 	response, invokeErr := this.client.Invoke(serverInstance.Address, request, timeout)
 	if invokeErr != nil {
-		return ConvertError(invokeErr)
+		return nil, ConvertError(invokeErr)
 	}
 	if !response.IsSuccess() {
-		return ConvertError(response.GetError())
+		return nil, response.GetError()
 	}
-	if err := response.GetHeader(respHeader); err != nil {
-		return ConvertError(err)
+	if respHeader != nil {
+		if err := response.GetHeader(respHeader); err != nil {
+			return nil, ConvertError(err)
+		}
 	}
-	return nil
+	return response.Body, nil
 }
 
 func (this *TenuredClientInvoke) initTenuredClient() (err error) {
@@ -70,11 +57,7 @@ func (this *TenuredClientInvoke) Shutdown(interrupt bool) {
 	this.client.Shutdown(interrupt)
 }
 
-func NewClient(serverName string, registry registry.ServiceRegistry, loadBalance registry.LoadBalance) *TenuredClientInvoke {
-	serverClient := &TenuredClientInvoke{
-		ServerName:  serverName,
-		registry:    registry,
-		loadBalance: loadBalance,
-	}
+func NewClientInvoke() *TenuredClientInvoke {
+	serverClient := &TenuredClientInvoke{}
 	return serverClient
 }

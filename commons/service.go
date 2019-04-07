@@ -1,6 +1,9 @@
 package commons
 
-import "sync/atomic"
+import (
+	"reflect"
+	"sync/atomic"
+)
 
 const (
 	S_STATUS_INIT       ServerStatus = 0 //服务初始化过程中
@@ -12,13 +15,21 @@ const (
 	S_STATUS_DOWN       ServerStatus = 6 //服务已经停止
 )
 
-type Service interface {
+type ServiceStarter interface {
 	Start() error
+}
+
+type ServiceShutdowner interface {
 	Shutdown(interrupt bool)
 }
 
+type Service interface {
+	ServiceStarter
+	ServiceShutdowner
+}
+
 func ShutdownIfService(obj interface{}, interrupt bool) {
-	if obj == nil {
+	if obj == nil || reflect.ValueOf(obj).IsNil() {
 		return
 	}
 	if service, match := obj.(Service); match {

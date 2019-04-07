@@ -25,7 +25,7 @@ func TestCommand(t *testing.T) {
 
 	re := response.GetError()
 
-	assert.Equal(t, re.(*TenuredError).Code, "1002")
+	assert.Equal(t, re.(*TenuredError).code, "1002")
 	t.Log(re)
 
 	req2 := NewRequest(2)
