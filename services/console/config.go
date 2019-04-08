@@ -14,8 +14,6 @@ type ConsoleConfig struct {
 
 	Data string `json:"data" yaml:"data"` //数据存储位置
 
-	WorkDir string `json:"workDir" json:"workDir"`
-
 	Logs *services.Logs `json:"logs" json:"logs"`
 
 	Registry *services.Registry `json:"registry" yaml:"registry"` //注册中心
@@ -27,10 +25,9 @@ type ConsoleConfig struct {
 
 func NewConsoleConfig() *ConsoleConfig {
 	return &ConsoleConfig{
-		HTTP:    ":6074",
-		Prefix:  mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
-		Data:    mixins.Get(mixins.KeyDataPath, mixins.DataPath),
-		WorkDir: mixins.Get(mixins.KeyDataPath, mixins.DataPath),
+		HTTP:   ":6074",
+		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
+		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
 		Logs: &services.Logs{
 			Level:  "info",
 			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/console.log",

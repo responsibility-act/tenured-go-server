@@ -12,13 +12,25 @@ enum AccountStatus {
 //账户信息
 type Account {
     //申请账户的ID
-	Id string zone
+	Id uint64
 
 	//企业名称，对接的企业名称
 	Name   string  empty
 
+    //企业描述
+    Description string empty
+
+    //企业营业执照
+    BusinessLicense string empty
+
+    //账户密码
+    Password string
+
 	//手机号
 	Mobile string
+
+	//绑定的登录邮箱
+	Email  string empty
 
     //允许调用的IP地址
 	AllowIP []string empty
@@ -26,7 +38,16 @@ type Account {
 	//申请状态
     Status  AccountStatus empty
 
+    //企业额外属性
     Attrs   map[string]string empty
+
+    //审核结果描述
+    StatusDescription string  empty
+     //审核时间
+    StatusTime        string empty
+
+    //企业创建时
+    CreateTime string empty
 }
 
 type Search {
@@ -51,6 +72,6 @@ service AccountService(2000) loadBalance(hash) {
     Apply(Account) () error(AccountExists,MobileExists)
 
     //根据用户ID获取用户
-    Get(id string) (Account) error(AccountNotExists)
+    Get(id uint64) (Account) error(AccountNotExists)
 
 }

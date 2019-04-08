@@ -31,3 +31,13 @@ func TestSonwflake(t *testing.T) {
 
 	t.Log(p)
 }
+
+func BenchmarkSonwflake(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if _, err := sf.NextID(); err != nil {
+				return
+			}
+		}
+	})
+}

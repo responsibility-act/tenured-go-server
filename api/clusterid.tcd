@@ -1,0 +1,4 @@
+//获取分布式ID
+service ClusterIdService(1000) loadBalance(round) {
+    Get() ([]byte)
+}

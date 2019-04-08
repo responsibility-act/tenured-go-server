@@ -36,9 +36,8 @@ const (
 // If CheckMachineID returns false, Snowflake is not created.
 // If CheckMachineID is nil, no validation is done.
 type Settings struct {
-	StartTime      time.Time
-	MachineID      func() (uint16, error)
-	CheckMachineID func(uint16) bool
+	StartTime time.Time
+	MachineID uint16
 }
 
 type Petal struct {
@@ -73,26 +72,23 @@ func NewSnowflake(st Settings) *Snowflake {
 	sf.mutex = new(sync.Mutex)
 	sf.sequence = uint16(1<<BitLenSequence - 1)
 
-	if st.StartTime.After(time.Now()) {
+	if sf.Settings(st) != nil {
 		return nil
+	}
+	return sf
+}
+
+func (sf *Snowflake) Settings(st Settings) error {
+	if st.StartTime.After(time.Now()) {
+		return errors.New("Start time cannot after current time!")
 	}
 	if st.StartTime.IsZero() {
 		sf.startTime = toSnowflakeTime(time.Date(2019, 4, 1, 0, 0, 0, 0, time.UTC))
 	} else {
 		sf.startTime = toSnowflakeTime(st.StartTime)
 	}
-
-	var err error
-	if st.MachineID == nil {
-		sf.machineID, err = lower16BitPrivateIP()
-	} else {
-		sf.machineID, err = st.MachineID()
-	}
-	if err != nil || (st.CheckMachineID != nil && !st.CheckMachineID(sf.machineID)) {
-		return nil
-	}
-
-	return sf
+	sf.machineID = st.MachineID
+	return nil
 }
 
 // NextID generates a next unique ID.

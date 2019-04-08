@@ -35,6 +35,11 @@ func (this *LoadBalancesDef) Add(addLines []string, info *TCDInfo) error {
 
 func NewLoadBalance() *LoadBalancesDef {
 	return &LoadBalancesDef{
-		LoadBalances: map[string]LoadBalanceDef{},
+		LoadBalances: map[string]LoadBalanceDef{
+			"round": {
+				Name: "round",
+				Fn:   "registry.NewRoundLoadBalance",
+			},
+		},
 	}
 }

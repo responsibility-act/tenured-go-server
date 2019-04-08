@@ -37,7 +37,7 @@ func isBase(t string) bool {
 		"float32", "float64",
 		"map[string]string",
 		"[]byte",
-		"string":
+		"string", "[]string":
 		return true
 	default:
 		return false
@@ -103,45 +103,29 @@ func (this *FuncDef) TimeoutDuration() string {
 	return fmt.Sprintf("time.Millisecond*%d", timeoutMillisecond)
 }
 
-func (this *FuncDef) ZoneField() string {
-	switch len(this.Ins) {
-	case 0:
-		return ""
-	case 1:
-		if isBase(this.Ins[0].Type) {
-			return this.Ins[0].Name
-		} else {
-			t := this.Types.Types[this.Ins[0].Type]
-			if zoneField := t.ZoneField(); zoneField == nil {
-				return ""
-			} else {
-				return fmt.Sprintf("%s.%s", this.Ins[0].Name, zoneField.Name)
-			}
-		}
-	default:
-		return this.Ins[0].Name
-	}
-}
-
 func (this *FuncDef) Body() string {
 	b := new(bytes.Buffer)
 
-	zoneField := this.ZoneField()
-	if zoneField == "" {
-		zoneField = "nil"
+	loadBanlanceParam := this.tcd.ApiPackageName + "." + this.serviceDef.Name + this.Name
+	if len(this.Ins) > 0 {
+		for _, v := range this.Ins {
+			loadBanlanceParam += "," + v.Name
+		}
 	}
+
 	b.WriteString(fmt.Sprintf(`
-			serverInstance, err := this.%sLB.Select(%s)
+			serverInstance,regKey, err := this.%sLB.Select(%s)
 			if err != nil || len(serverInstance) == 0 || registry.AllNotOK(serverInstance...) {
 				return %s protocol.ErrorRouter()
 			}
-		`, this.LoadBalance, zoneField, strings.Repeat("nil,", len(this.Outs)),
+			defer this.%sLB.Return(regKey)
+		`, this.LoadBalance, loadBanlanceParam, strings.Repeat("nil,", len(this.Outs)), this.LoadBalance,
 	))
 
 	//header
 	if len(this.Ins) == 0 {
 		b.WriteString(`
-			requestHeader := (struct{})(nil)
+			requestHeader := (interface{})(nil)
 		`)
 	} else if !isBase(this.Ins[0].Type) {
 		b.WriteString("	requestHeader := " + this.Ins[0].Name + "\n")
@@ -178,7 +162,7 @@ func (this *FuncDef) Body() string {
 	outLength := len(this.Outs)
 	if outLength == 0 {
 		b.WriteString(fmt.Sprintf(`
-			if _, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, nil); err != nil {
+			if _, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, nil); !commons.IsNil(err) {
 				return protocol.ConvertError(err)
 			}
 			return nil
@@ -187,7 +171,7 @@ func (this *FuncDef) Body() string {
 		if "[]byte" == this.Outs[0].Type { //body
 			b.WriteString(fmt.Sprintf(`
 					var respBody []byte
-					if respBody, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, nil); err != nil {
+					if respBody, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, nil); !commons.IsNil(err) {
 						return nil,protocol.ConvertError(err)
 					}else{
 						return respBody,nil
@@ -198,7 +182,7 @@ func (this *FuncDef) Body() string {
 		} else { //from header
 			b.WriteString(fmt.Sprintf(`
 				respHeader := &%s{}
-				if _, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, respHeader); err != nil {
+				if _, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, respHeader); !commons.IsNil(err) {
 					return nil,protocol.ConvertError(err)
 				}else{
 					return respHeader,nil
@@ -209,7 +193,7 @@ func (this *FuncDef) Body() string {
 		b.WriteString(fmt.Sprintf(`
 			respHeader := &%s{}
 			var respBody []byte
-			if respBody, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, respHeader); err != nil {
+			if respBody, err = this.Invoke(serverInstance[0], %s, requestHeader,requestBody, %s, respHeader); !commons.IsNil(err) {
 				return nil, nil, protocol.ConvertError(err)
 			}else{
 				return respHeader, respBody, nil
@@ -245,13 +229,13 @@ func (this *FuncDef) InvokeBody() string {
 				}
 			`, paramName))
 		} else {
-			b.WriteString(fmt.Sprintf("requestHeader := &struct{%s %s}{}", this.Ins[0].Name, this.Ins[0].Type))
+			b.WriteString(fmt.Sprintf("requestHeader := &struct{%s %s}{}", this.Ins[0].UpperName(), this.Ins[0].Type))
 			b.WriteString(`
 				if err := request.GetHeader(requestHeader); err != nil {
 					logger.Error("InvokeGetHeaderError",err)
 				}
 			`)
-			st.Request = "requestHeader." + paramName
+			st.Request = "requestHeader." + UpperName(paramName)
 		}
 	} else {
 		b.WriteString(" requestHeader := &struct{")
@@ -430,6 +414,16 @@ type {{.Name}}Client struct {
 	reg     registry.ServiceRegistry
 	{{range $name,$v := .DefinedLoadBalance}}
 	{{$name}}LB registry.LoadBalance{{end}}
+	
+	serviceManager *commons.ServiceManager
+}
+
+func (this *{{.Name}}Client) Start() error {
+	return this.serviceManager.Start()
+}
+
+func (this *{{.Name}}Client) Shutdown(interrupt bool) {
+	this.serviceManager.Shutdown(interrupt)
 }
 
 {{range .Funcs}}
@@ -445,12 +439,15 @@ func New{{.Name}}Client(serverName string, reg registry.ServiceRegistry) (*{{.Na
 	}
 	client.serverName = serverName
 	client.reg = reg
+	client.serviceManager = commons.NewServiceManager()
+	client.serviceManager.Add(client.TenuredClientInvoke)
 
 	{{range $name,$v := .DefinedLoadBalance}}
-	client.{{$name}}LB = {{$v}}(serverName,reg){{end}}
+	client.{{$name}}LB = {{$v}}(serverName,reg)
+	client.serviceManager.Add(client.{{$name}}LB)
+	{{end}}
 
-	err := client.Start()
-	return client, err
+	return client, nil
 }
 
 {{end}}`))

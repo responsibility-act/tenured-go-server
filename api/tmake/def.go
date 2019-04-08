@@ -64,6 +64,7 @@ func (def *Def) Client(tcd *TCDInfo) []byte {
 		tcd.ApiPackageUrl,
 		TenuredHome + "/commons/protocol",
 		TenuredHome + "/commons/registry",
+		TenuredHome + "/commons",
 		"time",
 	} {
 		b.WriteString(fmt.Sprintf(` "%s"`, v))

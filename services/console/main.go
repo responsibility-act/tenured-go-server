@@ -29,7 +29,7 @@ var ConsoleCommand = &cobra.Command{
 		if err := services.LoadServerConfig("console", config, consoleConfig); err != nil {
 			return err
 		}
-		if err = os.Chdir(consoleConfig.WorkDir); err != nil {
+		if err = os.Chdir(consoleConfig.Data); err != nil {
 			return err
 		}
 

@@ -42,9 +42,10 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			}
 		}
 
-		b.WriteString(fmt.Sprintf("%s:%d %s ",
+		b.WriteString(fmt.Sprintf("%s:%d %s",
 			entry.Caller.File, entry.Caller.Line, entry.Caller.Function))
 	}
+	b.WriteString(": ")
 	if len(entry.Data) > 0 {
 		b.WriteString("{ ")
 		for k, v := range entry.Data {

@@ -1,25 +1,25 @@
 {
-  "prefix": "tenured",
-  "data": "/data/tenured",
-  "registry": {
-    "address": "consul://127.0.0.1:8500",
-    "attributes": {
-      "interval": "30s"
-    }
-  },
-  "tcp": {
-    "port": 6072,
-    "enableAuthPort": false,
-    "ignoredInterfaces": [
-      "docker0"
-    ],
-    "sendLimit": 10000,
-    "packetBytesLimit": 1024,
-    "acceptTimeout": 3,
-    "idleTime": 15,
-    "idleTimeout": 3
-  },
-  "logs": {
-    "output": "file"
-  }
+	"prefix": "tenured",
+	"data": "/data/tenured",
+	"registry": {
+		"address": "consul://127.0.0.1:8500",
+		"attributes": {
+			"interval": "30s"
+		}
+	},
+	"tcp": {
+		"port": 6072,
+		"enableAuthPort": false,
+		"ignoredInterfaces": [
+			"docker0"
+		],
+		"sendLimit": 10000,
+		"packetBytesLimit": 1024,
+		"acceptTimeout": 3,
+		"idleTime": 15,
+		"idleTimeout": 3
+	},
+	"logs": {
+		"output": "file"
+	}
 }

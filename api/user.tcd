@@ -13,7 +13,7 @@ type User {
 	AppID string
 
 	//云用户ID
-	CloudID string zone
+	CloudID string
 
     //第三方系统ID，不允许修改、不允许超过32位
 	UserId string

@@ -28,6 +28,16 @@ type Service interface {
 	ServiceShutdowner
 }
 
+func StartIfService(obj interface{}) error {
+	if obj == nil || reflect.ValueOf(obj).IsNil() {
+		return nil
+	}
+	if service, match := obj.(Service); match {
+		return service.Start()
+	}
+	return nil
+}
+
 func ShutdownIfService(obj interface{}, interrupt bool) {
 	if obj == nil || reflect.ValueOf(obj).IsNil() {
 		return
@@ -41,12 +51,14 @@ type ServiceManager struct {
 	services []Service
 }
 
-func (this *ServiceManager) Add(obj interface{}) {
-	if obj == nil {
+func (this *ServiceManager) Add(objs ...interface{}) {
+	if objs == nil {
 		return
 	}
-	if service, match := obj.(Service); match {
-		this.services = append(this.services, service)
+	for _, obj := range objs {
+		if service, match := obj.(Service); match {
+			this.services = append(this.services, service)
+		}
 	}
 }
 

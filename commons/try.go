@@ -3,6 +3,7 @@ package commons
 import (
 	"errors"
 	"fmt"
+	"reflect"
 )
 
 //Try handler(err)
@@ -38,5 +39,13 @@ func Catch(r interface{}) error {
 func Painc(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+func IsNil(i interface{}) bool {
+	if i == nil {
+		return true
+	} else {
+		return reflect.ValueOf(i).IsNil()
 	}
 }

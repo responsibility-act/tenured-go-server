@@ -6,8 +6,10 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
-	"github.com/ihaiker/tenured-go-server/services"
 	"github.com/kataras/iris/core/errors"
+	uuid "github.com/satori/go.uuid"
+	"strings"
+	"time"
 )
 
 type storeServer struct {
@@ -16,7 +18,7 @@ type storeServer struct {
 	server   *protocol.TenuredServer
 	registry registry.ServiceRegistry
 
-	serviceWappers *ServicesInvoke
+	serviceInvokeManager *ServicesInvoke
 }
 
 func (this *storeServer) startTenuredServer() (err error) {
@@ -38,11 +40,36 @@ func (this *storeServer) startTenuredServer() (err error) {
 		return
 	}
 
-	this.serviceWappers = NewServicesWapper(this.config, this.server)
-	if err = this.serviceWappers.Start(); err != nil {
+	this.serviceInvokeManager = NewServicesWapper(this.config, this.server)
+	if err = this.serviceInvokeManager.Start(); err != nil {
 		return
 	}
 	return
+}
+
+func NewClusterID(workDir string, serverName string) (string, string, error) {
+	clusterIdFile := commons.NewFile(workDir + fmt.Sprintf("/%s.cid", serverName))
+
+	if clusterIdFile.Exist() {
+		if line, err := clusterIdFile.ToString(); err != nil {
+			return "", "", err
+		} else {
+			sp := strings.SplitN(line, ",", 2)
+			return sp[0], sp[1], nil
+		}
+	}
+	u, _ := uuid.NewV4()
+	clusterId := strings.ToUpper(strings.ReplaceAll(u.String(), "-", ""))
+	firstStartTime := time.Now().Format("20060102150405")
+	if out, err := clusterIdFile.GetWriter(false); err != nil {
+		return "", "", err
+	} else {
+		defer out.Close()
+		if _, err := out.Write([]byte(clusterId + "," + firstStartTime)); err != nil {
+			return "", "", err
+		}
+	}
+	return clusterId, firstStartTime, nil
 }
 
 func (this *storeServer) startRegistry() error {
@@ -61,26 +88,29 @@ func (this *storeServer) startRegistry() error {
 		return err
 	}
 
-	//获取集群ID
-	clusterId := services.NewClusterID(this.config.WorkDir, this.registry)
+	//注册服务名称
+	serverName := this.config.Prefix + "_store"
 
+	//获取集群ID
+	clusterId, _, err := NewClusterID(this.config.Data, serverName)
+	if err != nil {
+		return err
+	}
 	if serverInstance, err := plugins.Instance(this.config.Registry.Attributes); err != nil {
 		return err
 	} else {
-		serverInstance.Name = this.config.Prefix + "_store"
-		serverInstance.Id, err = clusterId.Id(serverInstance.Name)
-		if err != nil {
-			return err
-		}
+		serverInstance.Name = serverName
+		serverInstance.Id = clusterId
 		serverInstance.Address = this.address
 		serverInstance.Metadata = this.config.Registry.Metadata
+		if serverInstance.Metadata == nil {
+			serverInstance.Metadata = map[string]string{}
+		}
+		serverInstance.Metadata["FirstStartTime"] = "834953373" //for TimeHashLoadBalance
 		serverInstance.Tags = this.config.Registry.Tags
-
 		if err := this.registry.Register(*serverInstance); err != nil {
 			return err
 		}
-
-		err = clusterId.CheckAndWrite(serverInstance.Name, serverInstance.Id)
 	}
 	return err
 }
@@ -99,8 +129,8 @@ func (this *storeServer) Start() error {
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
 	commons.ShutdownIfService(this.registry, interrupt)
-	if this.serviceWappers != nil {
-		this.serviceWappers.Shutdown(interrupt)
+	if this.serviceInvokeManager != nil {
+		this.serviceInvokeManager.Shutdown(interrupt)
 	}
 	if this.server != nil {
 		this.server.Shutdown(interrupt)

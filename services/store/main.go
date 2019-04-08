@@ -28,7 +28,7 @@ var StoreCmd = &cobra.Command{
 			return err
 		}
 
-		if err = os.Chdir(storeCfg.WorkDir); err != nil {
+		if err = os.Chdir(storeCfg.Data); err != nil {
 			return err
 		}
 

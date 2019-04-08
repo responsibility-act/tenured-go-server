@@ -198,7 +198,7 @@ func (this *defChannel) readLoop() {
 			return
 		default:
 			if msg, err := this.decoderMessage(this.conn); err != nil {
-				if err != io.EOF && err != io.ErrUnexpectedEOF {
+				if err != io.EOF && err != io.ErrUnexpectedEOF && err.Error() == "use of closed network connection" {
 					logger.Errorf("channel %s decoder error: %s ", this.RemoteAddr(), err)
 				}
 				return

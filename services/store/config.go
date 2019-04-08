@@ -12,8 +12,6 @@ type storeConfig struct {
 
 	Data string `json:"data" yaml:"data"` //数据存储位置
 
-	WorkDir string `json:"workDir" json:"workDir"`
-
 	Logs *services.Logs `json:"logs" json:"logs"`
 
 	Registry *services.Registry `json:"registry" yaml:"registry"` //注册中心
@@ -25,9 +23,8 @@ type storeConfig struct {
 
 func NewStoreConfig() *storeConfig {
 	return &storeConfig{
-		Prefix:  mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
-		Data:    mixins.Get(mixins.KeyDataPath, mixins.DataPath),
-		WorkDir: mixins.Get(mixins.KeyDataPath, mixins.DataPath),
+		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
+		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
 		Logs: &services.Logs{
 			Level:  "info",
 			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/store.log",

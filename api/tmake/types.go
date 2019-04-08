@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-var typePattern = regexp.MustCompile(`^(\w+) ([\[\]\w]+)?( (empty|zone))?$`)
+var typePattern = regexp.MustCompile(`^(\w+) ([\[\]\w]+)?( (empty))?$`)
 
 type FieldDef struct {
 	Name   string
@@ -32,15 +32,6 @@ type TypeDef struct {
 	Name   string
 	Desc   string
 	Fields []FieldDef
-}
-
-func (this *TypeDef) ZoneField() *FieldDef {
-	for _, v := range this.Fields {
-		if v.Option == "zone" {
-			return &v
-		}
-	}
-	return nil
 }
 
 type TypesDef struct {

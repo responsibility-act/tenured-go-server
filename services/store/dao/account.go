@@ -3,6 +3,7 @@ package dao
 import (
 	"encoding/json"
 	"github.com/ihaiker/tenured-go-server/api"
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
@@ -21,10 +22,11 @@ type AccountServer struct {
 }
 
 func NewAccountServer(dataPath string) *AccountServer {
-	return &AccountServer{dataPath: dataPath}
+	return &AccountServer{dataPath: dataPath + "/store/account"}
 }
 
 func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
+	logger.Infof("申请用户：%v", account)
 	if storeAccount, err := this.Get(account.Id); err != nil {
 		return err
 	} else if storeAccount != nil {
@@ -34,15 +36,17 @@ func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
 
 	if bs, err := json.Marshal(account); err != nil {
 		return protocol.ErrorDB(err)
-	} else if err := this.data.Put([]byte(account.Id), bs, writeOptions); err != nil {
+	} else if err := this.data.Put(commons.UInt64(account.Id), bs, writeOptions); err != nil {
 		return protocol.ErrorDB(err)
 	}
 
 	return nil
 }
 
-func (this *AccountServer) Get(id string) (*api.Account, *protocol.TenuredError) {
-	if val, err := this.data.Get([]byte(id), readOptions); err != nil {
+func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError) {
+	logger.Debug(" get user: ", id)
+
+	if val, err := this.data.Get(commons.UInt64(id), readOptions); err != nil {
 		if err.Error() == levelDBNotFound {
 			return nil, nil
 		} else {

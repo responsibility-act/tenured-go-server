@@ -33,8 +33,7 @@ func (this *ServicesInvoke) Start() (err error) {
 		if err = invoke.NewAccountServiceInvoke(this.server, accountServer, executorManager); err != nil {
 			return
 		}
-		this.serviceManager.Add(executorManager)
-		this.serviceManager.Add(accountServer)
+		this.serviceManager.Add(executorManager, accountServer)
 	}
 
 	return this.serviceManager.Start()
