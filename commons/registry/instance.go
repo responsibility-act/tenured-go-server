@@ -87,11 +87,11 @@ func LoadModel(obj interface{}, m map[string]string) {
 	}
 }
 
-func IsOK(instance ServerInstance) bool {
+func IsOK(instance *ServerInstance) bool {
 	return instance.Status == "OK"
 }
 
-func AllNotOK(instance ...ServerInstance) bool {
+func AllNotOK(instance ...*ServerInstance) bool {
 	for _, v := range instance {
 		if IsOK(v) {
 			return false

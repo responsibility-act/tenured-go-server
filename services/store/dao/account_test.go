@@ -17,13 +17,13 @@ func TestAccountServer_Apply(t *testing.T) {
 	assert.Nil(t, err)
 
 	account := &api.Account{}
-	account.Id = "123123"
+	account.Id = 123123
 	account.Name = "123123"
 
 	err = accountService.Apply(account)
 	assert.Nil(t, err)
 
-	ac, err := accountService.Get("123123")
+	ac, err := accountService.Get(123123)
 	assert.Nil(t, err)
 	t.Log(ac)
 }

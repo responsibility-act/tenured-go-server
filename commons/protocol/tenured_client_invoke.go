@@ -11,7 +11,7 @@ type TenuredClientInvoke struct {
 }
 
 func (this *TenuredClientInvoke) Invoke(
-	serverInstance registry.ServerInstance,
+	serverInstance *registry.ServerInstance,
 	code uint16, header interface{}, body []byte, timeout time.Duration, respHeader interface{},
 ) ([]byte, *TenuredError) {
 	request := NewRequest(code)

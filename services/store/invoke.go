@@ -8,7 +8,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/services/store/dao"
 )
 
-type ServicesInvoke struct {
+type ServicesInvokeManager struct {
 	//需要执行关闭的服务
 	serviceManager *commons.ServiceManager
 
@@ -17,18 +17,17 @@ type ServicesInvoke struct {
 	server *protocol.TenuredServer
 }
 
-func NewServicesWapper(config *storeConfig, server *protocol.TenuredServer) *ServicesInvoke {
-	return &ServicesInvoke{
+func NewServicesInvokeManager(config *storeConfig, server *protocol.TenuredServer) *ServicesInvokeManager {
+	return &ServicesInvokeManager{
 		serviceManager: commons.NewServiceManager(),
 		config:         config,
 		server:         server,
 	}
 }
 
-func (this *ServicesInvoke) Start() (err error) {
-
+func (this *ServicesInvokeManager) Start() (err error) {
+	executorManager := executors.NewExecutorManager(executors.NewFixedExecutorService(100, 10000))
 	{
-		executorManager := executors.NewExecutorManager(executors.NewFixedExecutorService(100, 10000))
 		accountServer := dao.NewAccountServer(this.config.Data)
 		if err = invoke.NewAccountServiceInvoke(this.server, accountServer, executorManager); err != nil {
 			return
@@ -39,6 +38,6 @@ func (this *ServicesInvoke) Start() (err error) {
 	return this.serviceManager.Start()
 }
 
-func (this *ServicesInvoke) Shutdown(interrupt bool) {
+func (this *ServicesInvokeManager) Shutdown(interrupt bool) {
 	this.serviceManager.Shutdown(interrupt)
 }

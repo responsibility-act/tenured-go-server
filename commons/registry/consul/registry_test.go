@@ -15,24 +15,20 @@ func init() {
 	config, _ = registry.ParseConfig("consul://127.0.0.1:8500")
 }
 
-type NLister struct {
-}
-
-func (this *NLister) OnNotify(status registry.RegistionStatus, serverInstances []registry.ServerInstance) {
-	if status == registry.UNREGISTER {
-		logrus.Info("OnNotify deregister: ", serverInstances)
-	} else {
-		logrus.Info("OnNotify register  : ", serverInstances)
-	}
-}
-
 func TestConsulServiceRegistry_Register(t *testing.T) {
 	plugin, has := registry.GetPlugins(config.Plugin)
 	assert.True(t, has)
 
 	sr, err := plugin.Registry(*config)
+	assert.Nil(t, err)
 
-	err = sr.Subscribe("test", &NLister{})
+	err = sr.Subscribe("test", func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
+		if status == registry.UNREGISTER {
+			logrus.Info("OnNotify deregister: ", serverInstances)
+		} else {
+			logrus.Info("OnNotify register  : ", serverInstances)
+		}
+	})
 	t.Log(err)
 
 	si, _ := plugin.Instance(map[string]string{"interval": "1s"})
@@ -42,7 +38,7 @@ func TestConsulServiceRegistry_Register(t *testing.T) {
 	si.Address = "127.0.0.1:6071"
 	si.Metadata = map[string]string{"test_metadata": "demo"}
 
-	err = sr.Register(*si)
+	err = sr.Register(si)
 	assert.Nil(t, err)
 
 	ss, err := sr.Lookup("test", nil)

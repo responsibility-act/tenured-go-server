@@ -11,7 +11,7 @@ import (
 
 type subscribeInfo struct {
 	listeners *hashset.Set
-	services  map[string]registry.ServerInstance
+	services  map[string]*registry.ServerInstance
 	closeChan chan struct{}
 }
 
@@ -37,7 +37,7 @@ func (this *ConsulServiceRegistry) Shutdown(interrupt bool) {
 	}
 }
 
-func (this *ConsulServiceRegistry) Register(serverInstance registry.ServerInstance) error {
+func (this *ConsulServiceRegistry) Register(serverInstance *registry.ServerInstance) error {
 	logger.Infof("to register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
 	attrs := serverInstance.PluginAttrs.(*ConsulServerAttrs)
 	if host, portStr, err := net.SplitHostPort(serverInstance.Address); err != nil {
@@ -73,12 +73,12 @@ func (this *ConsulServiceRegistry) Unregister(serverId string) error {
 	return this.client.Agent().ServiceDeregister(serverId)
 }
 
-func (this *ConsulServiceRegistry) convertService(serverName string, service *api.ServiceEntry) registry.ServerInstance {
+func (this *ConsulServiceRegistry) convertService(serverName string, service *api.ServiceEntry) *registry.ServerInstance {
 	status := service.Checks.AggregatedStatus()
 	if status == api.HealthPassing {
 		status = "OK"
 	}
-	return registry.ServerInstance{
+	return &registry.ServerInstance{
 		Id:       service.Service.ID,
 		Name:     serverName,
 		Metadata: service.Service.Meta,
@@ -101,8 +101,8 @@ func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 	failWaitTime := this.config.HealthFailWaitTime()
 	waitTime := healthWaitTime
 
-	register := make([]registry.ServerInstance, 0)
-	deregister := make([]registry.ServerInstance, 0)
+	register := make([]*registry.ServerInstance, 0)
+	deregister := make([]*registry.ServerInstance, 0)
 
 	for {
 		subInfo, has := this.subscribes[serverName]
@@ -133,12 +133,12 @@ func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 			register = register[:0]
 			deregister = deregister[:0]
 			if subInfo.services == nil {
-				subInfo.services = map[string]registry.ServerInstance{}
+				subInfo.services = map[string]*registry.ServerInstance{}
 				for _, s := range services {
 					subInfo.services[s.Service.ID] = this.convertService(serverName, s)
 				}
 			} else {
-				currentServices := map[string]registry.ServerInstance{}
+				currentServices := map[string]*registry.ServerInstance{}
 
 				for _, s := range services {
 					current := this.convertService(serverName, s)
@@ -159,12 +159,10 @@ func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 
 				for _, v := range subInfo.listeners.Values() {
 					if len(register) > 0 {
-						v.(registry.RegistryNotifyListener).
-							OnNotify(registry.REGISTER, register)
+						v.(registry.RegistryNotifyListener)(registry.REGISTER, register)
 					}
 					if len(deregister) > 0 {
-						v.(registry.RegistryNotifyListener).
-							OnNotify(registry.UNREGISTER, deregister)
+						v.(registry.RegistryNotifyListener)(registry.UNREGISTER, deregister)
 					}
 				}
 				subInfo.services = currentServices
@@ -191,12 +189,12 @@ func (this *ConsulServiceRegistry) Unsubscribe(serverName string, listener regis
 	return nil
 }
 
-func (this *ConsulServiceRegistry) Lookup(serverName string, tags []string) ([]registry.ServerInstance, error) {
+func (this *ConsulServiceRegistry) Lookup(serverName string, tags []string) ([]*registry.ServerInstance, error) {
 	if services, _, err := this.client.Health().
 		ServiceMultipleTags(serverName, tags, false, &api.QueryOptions{}); err != nil {
 		return nil, err
 	} else {
-		serverInstances := make([]registry.ServerInstance, len(services))
+		serverInstances := make([]*registry.ServerInstance, len(services))
 		for i := 0; i < len(services); i++ {
 			serverInstances[i] = this.convertService(serverName, services[i])
 		}

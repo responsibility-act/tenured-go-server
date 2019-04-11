@@ -2,13 +2,14 @@ package store
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
+	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/commons/snowflake"
 	"github.com/kataras/iris/core/errors"
-	uuid "github.com/satori/go.uuid"
-	"strings"
 	"time"
 )
 
@@ -18,7 +19,9 @@ type storeServer struct {
 	server   *protocol.TenuredServer
 	registry registry.ServiceRegistry
 
-	serviceInvokeManager *ServicesInvoke
+	serviceInvokeManager *ServicesInvokeManager
+
+	snowflakeId *snowflake.Snowflake
 }
 
 func (this *storeServer) startTenuredServer() (err error) {
@@ -40,36 +43,47 @@ func (this *storeServer) startTenuredServer() (err error) {
 		return
 	}
 
-	this.serviceInvokeManager = NewServicesWapper(this.config, this.server)
+	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.server)
 	if err = this.serviceInvokeManager.Start(); err != nil {
 		return
 	}
 	return
 }
 
-func NewClusterID(workDir string, serverName string) (string, string, error) {
-	clusterIdFile := commons.NewFile(workDir + fmt.Sprintf("/%s.cid", serverName))
-
-	if clusterIdFile.Exist() {
-		if line, err := clusterIdFile.ToString(); err != nil {
-			return "", "", err
+//return clusterId(snowflakeId)
+func (this *storeServer) ClusterID(serverName string) (uint64, error) {
+	clusterId := uint64(0)
+	if ss, err := this.registry.Lookup(serverName, nil); err != nil {
+		return 0, err
+	} else {
+		this.snowflakeId = snowflake.NewSnowflake(snowflake.Settings{
+			MachineID: uint16(len(ss)),
+		})
+		if nextId, err := this.snowflakeId.NextID(); err != nil {
+			return 0, err
 		} else {
-			sp := strings.SplitN(line, ",", 2)
-			return sp[0], sp[1], nil
+			clusterId = nextId
 		}
 	}
-	u, _ := uuid.NewV4()
-	clusterId := strings.ToUpper(strings.ReplaceAll(u.String(), "-", ""))
-	firstStartTime := time.Now().Format("20060102150405")
+
+	clusterIdFile := commons.NewFile(this.config.Data + fmt.Sprintf("/%s.cid", serverName))
+	if clusterIdFile.Exist() {
+		if line, err := clusterIdFile.ToBytes(); err != nil {
+			return 0, err
+		} else {
+			return commons.ToUInt64(line), nil
+		}
+	}
+
 	if out, err := clusterIdFile.GetWriter(false); err != nil {
-		return "", "", err
+		return 0, err
 	} else {
 		defer out.Close()
-		if _, err := out.Write([]byte(clusterId + "," + firstStartTime)); err != nil {
-			return "", "", err
+		if _, err := out.Write(commons.UInt64(clusterId)); err != nil {
+			return 0, err
 		}
 	}
-	return clusterId, firstStartTime, nil
+	return clusterId, nil
 }
 
 func (this *storeServer) startRegistry() error {
@@ -78,7 +92,6 @@ func (this *storeServer) startRegistry() error {
 	if err != nil {
 		return err
 	}
-
 	plugins, has := registry.GetPlugins(pluginsConfig.Plugin)
 	if !has {
 		return errors.New("not found registry: " + this.config.Registry.Address)
@@ -90,29 +103,44 @@ func (this *storeServer) startRegistry() error {
 
 	//注册服务名称
 	serverName := this.config.Prefix + "_store"
-
 	//获取集群ID
-	clusterId, _, err := NewClusterID(this.config.Data, serverName)
+	clusterId, err := this.ClusterID(serverName)
+
 	if err != nil {
 		return err
 	}
+	petal := snowflake.Decompose(clusterId)
 	if serverInstance, err := plugins.Instance(this.config.Registry.Attributes); err != nil {
 		return err
 	} else {
 		serverInstance.Name = serverName
-		serverInstance.Id = clusterId
+		serverInstance.Id = fmt.Sprintf("%d", clusterId)
 		serverInstance.Address = this.address
 		serverInstance.Metadata = this.config.Registry.Metadata
+
 		if serverInstance.Metadata == nil {
 			serverInstance.Metadata = map[string]string{}
 		}
-		serverInstance.Metadata["FirstStartTime"] = "834953373" //for TimeHashLoadBalance
+		serverInstance.Metadata["FirstStartTime"] = fmt.Sprintf("%d", petal.Time)
+
 		serverInstance.Tags = this.config.Registry.Tags
-		if err := this.registry.Register(*serverInstance); err != nil {
+		if err := this.registry.Register(serverInstance); err != nil {
 			return err
 		}
 	}
 	return err
+}
+
+func (this *storeServer) registrySnowflake() {
+	this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
+		logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
+		response := protocol.NewACK(request.ID())
+		id, _ := this.snowflakeId.NextID()
+		response.Body = commons.UInt64(id)
+		if err := channel.Write(response, time.Millisecond*3000); err != nil {
+			logger.Error("snowflake write error: ", err)
+		}
+	}, nil)
 }
 
 func (this *storeServer) Start() error {
@@ -123,6 +151,7 @@ func (this *storeServer) Start() error {
 	if err := this.startRegistry(); err != nil {
 		return err
 	}
+	this.registrySnowflake()
 	return nil
 }
 

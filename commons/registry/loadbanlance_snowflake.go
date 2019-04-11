@@ -32,10 +32,10 @@ type TimedHashLoadBalance struct {
 	tree *treemap.Map
 
 	//保存注册服务
-	serverInstances map[string]ServerInstance
+	serverInstances map[string]*ServerInstance
 }
 
-func (this *TimedHashLoadBalance) addSerInstance(instance ServerInstance) {
+func (this *TimedHashLoadBalance) addSerInstance(instance *ServerInstance) {
 	id := instance.Id
 	firstStartTime, _ := strconv.ParseUint(instance.Metadata["FirstStartTime"], 10, 64)
 
@@ -56,15 +56,24 @@ func (this *TimedHashLoadBalance) Start() error {
 		this.addSerInstance(serverInstance)
 	}
 
-	//this.registration.Subscribe(this.serverName,)
-	return nil
+	return this.registration.Subscribe(this.serverName, this.onNotify)
+}
+
+func (this *TimedHashLoadBalance) onNotify(status RegistionStatus, serverInstances []*ServerInstance) {
+	for _, si := range serverInstances {
+		if status == REGISTER {
+			this.addSerInstance(si)
+		} else if saveIs, has := this.serverInstances[si.Id]; has {
+			saveIs.Status = status.String()
+		}
+	}
 }
 
 func (this *TimedHashLoadBalance) Shutdown(interrupt bool) {
-	//this.registration.Unsubscribe(this.serverName,nil)
+	_ = this.registration.Unsubscribe(this.serverName, this.onNotify)
 }
 
-func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]ServerInstance, string, error) {
+func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]*ServerInstance, string, error) {
 	//从请求参数参数中获取分区的snowflake生成的ID
 	snowflakeId := this.snowflakeExport(obj[0].(uint16), obj[1:]...)
 	//分解此项ID值
@@ -85,7 +94,7 @@ func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]ServerInstance, 
 	}
 
 	serverId := value.(*element).Id
-	return []ServerInstance{this.serverInstances[serverId]}, "", nil
+	return []*ServerInstance{this.serverInstances[serverId]}, "", nil
 }
 
 func (this *TimedHashLoadBalance) Return(key string) {}
@@ -95,7 +104,7 @@ func NewTimedHashLoadBalance(serverName string, registration ServiceRegistry, vi
 		serverName: serverName, registration: registration,
 		snowflakeExport: snowflakeExport, table: crc64.MakeTable(crc64.ECMA),
 		virtualNum: virtualNum, tree: treemap.NewWith(utils.UInt64Comparator),
-		serverInstances: map[string]ServerInstance{},
+		serverInstances: map[string]*ServerInstance{},
 	}
 	return hlb
 }

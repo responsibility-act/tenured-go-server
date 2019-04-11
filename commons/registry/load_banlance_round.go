@@ -8,7 +8,7 @@ type roundLoadBalance struct {
 	reg        ServiceRegistry
 }
 
-func (this *roundLoadBalance) Select(obj ...interface{}) ([]ServerInstance, string, error) {
+func (this *roundLoadBalance) Select(obj ...interface{}) ([]*ServerInstance, string, error) {
 	currentRangeIndex := this.rangeIndex.GetAndIncrement()
 	if ss, err := this.reg.Lookup(this.serverName, nil); err != nil {
 		return nil, "", err
@@ -16,7 +16,7 @@ func (this *roundLoadBalance) Select(obj ...interface{}) ([]ServerInstance, stri
 		return ss, "", err
 	} else {
 		idx := int(currentRangeIndex % uint32(len(ss)))
-		return []ServerInstance{ss[idx]}, "", nil
+		return []*ServerInstance{ss[idx]}, "", nil
 	}
 }
 
