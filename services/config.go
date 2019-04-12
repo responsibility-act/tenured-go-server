@@ -10,10 +10,10 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
 	"github.com/sirupsen/logrus"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type Registry struct {
@@ -80,7 +80,7 @@ func SearchServerConfig(serverName string) []string {
 func LoadConfig(path string, config interface{}) error {
 	fs := commons.NewFile(path)
 	if !fs.Exist() || fs.IsDir() {
-		return errors.New("the config not found : " + path)
+		return os.ErrNotExist
 	}
 
 	bs, err := fs.ToBytes()
@@ -107,17 +107,19 @@ func LoadServerConfig(server, configFile string, configObj interface{}) error {
 	if configFile != "" {
 		return LoadConfig(configFile, configObj)
 	} else {
+		logrus.Debug("search config file.")
 		searchConfigs := SearchServerConfig(server)
 		for _, searchConfig := range searchConfigs {
 			if err := LoadConfig(searchConfig, configObj); err == nil {
-				logrus.Info("use config file: ", searchConfig)
+				logrus.Debug("use config file: ", searchConfig)
 				return nil
-			} else if !strings.Contains(err.Error(), "the config not found") {
-				return err
+			} else if err == os.ErrNotExist {
+				logrus.Debug("the file not found: ", searchConfig)
 			} else {
-				logrus.Debugf(err.Error())
+				return err
 			}
 		}
-		return errors.New("any config found ! \n\t" + strings.Join(searchConfigs, "\n\t"))
+		logrus.Info("use default config.")
+		return nil
 	}
 }

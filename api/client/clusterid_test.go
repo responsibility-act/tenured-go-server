@@ -4,6 +4,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/kataras/iris/core/errors"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ func GetClusterService() (api.ClusterIdService, error) {
 	} else if reg, err := plugins.Registry(*config); err != nil {
 		return nil, err
 	} else {
-		return NewClusterIdServiceClient("tenured_store", reg)
+		return NewClusterIdServiceClient("tenured_store", cache.NewCacheRegistry(reg))
 	}
 }
 

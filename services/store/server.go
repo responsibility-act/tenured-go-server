@@ -7,6 +7,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
 	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
@@ -144,8 +145,10 @@ func (this *storeServer) startRegistry() error {
 		return errors.New("not found registry: " + this.config.Registry.Address)
 	}
 
-	if this.registry, err = plugins.Registry(*pluginsConfig); err != nil {
+	if reg, err := plugins.Registry(*pluginsConfig); err != nil {
 		return err
+	} else {
+		this.registry = cache.NewCacheRegistry(reg)
 	}
 
 	//注册服务名称
