@@ -103,10 +103,13 @@ func (this *FuncDef) TimeoutDuration() string {
 	return fmt.Sprintf("time.Millisecond*%d", timeoutMillisecond)
 }
 
-func (this *FuncDef) Body() string {
+func (this *FuncDef) ClientBody() string {
 	b := new(bytes.Buffer)
 
 	loadBanlanceParam := this.tcd.ApiPackageName + "." + this.serviceDef.Name + this.Name
+	if this.LoadBalance == "none" {
+		loadBanlanceParam += ",gl"
+	}
 	if len(this.Ins) > 0 {
 		for _, v := range this.Ins {
 			loadBanlanceParam += "," + v.Name
@@ -213,16 +216,20 @@ func (this *FuncDef) InvokeBody() string {
 	}{Header: false, Bodyer: false, Method: this.Name}
 
 	st.Request = ""
+	if this.LoadBalance == "none" {
+		st.Request += "nil,"
+	}
+
 	if len(this.Ins) == 0 {
 
 	} else if len(this.Ins) == 1 {
 		paramName := this.Ins[0].Name
 		if this.Ins[0].IsBody() {
 			b.WriteString(fmt.Sprintf(`%s := request.Body`, paramName))
-			st.Request = paramName
+			st.Request += paramName
 		} else if !isBase(this.Ins[0].Type) {
 			b.WriteString(fmt.Sprintf(`%s := &%s.%s{}`, paramName, this.tcd.ApiPackageName, this.Ins[0].Type))
-			st.Request = paramName
+			st.Request += paramName
 			b.WriteString(fmt.Sprintf(`
 				if err := request.GetHeader(%s); err != nil {
 					logger.Error("InvokeGetHeaderError",err)
@@ -235,7 +242,7 @@ func (this *FuncDef) InvokeBody() string {
 					logger.Error("InvokeGetHeaderError",err)
 				}
 			`)
-			st.Request = "requestHeader." + UpperName(paramName)
+			st.Request += "requestHeader." + UpperName(paramName)
 		}
 	} else {
 		b.WriteString(" requestHeader := &struct{")
@@ -301,6 +308,7 @@ type ServiceDef struct {
 }
 
 type ServicesDef struct {
+	Imports      *Imports
 	LoadBalances *LoadBalancesDef
 	Types        *TypesDef
 	TCD          *TCDInfo
@@ -356,6 +364,9 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 			funDef.Timeout = gs[9]
 		}
 
+		if funDef.LoadBalance == "none" {
+			this.Imports.AddInterface(TenuredHome+"/commons/registry", "")
+		}
 		serviceDef.DefinedLoadBalance[funDef.LoadBalance] = this.LoadBalances.New(funDef.LoadBalance)
 
 		if trim(gs[2]) != "" {
@@ -397,7 +408,7 @@ var (
 type {{.Name}} interface {
 	{{range .Funcs}}
 	{{.Desc}}
-	{{.Name}}({{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.ShowType}}{{end}} ) ( {{range .Outs}}{{.ShowType}}, {{end}}*protocol.TenuredError )
+	{{.Name}}({{if eq .LoadBalance "none" }} gl *registry.GlobalLoading,{{end}} {{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.ShowType}}{{end}} ) ( {{range .Outs}}{{.ShowType}}, {{end}}*protocol.TenuredError )
 	{{end}}
 }{{end}}`, this, b)
 	return b.Bytes()
@@ -428,8 +439,8 @@ func (this *{{.Name}}Client) Shutdown(interrupt bool) {
 
 {{range .Funcs}}
 	{{.Desc}}
-func (this *{{$s.Name}}Client) {{.Name}}({{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.UseShowType}}{{end}} ) ( {{range .Outs}}{{.UseShowType}}, {{end}}*protocol.TenuredError ) {
-	{{.Body}}
+func (this *{{$s.Name}}Client) {{.Name}}({{if eq .LoadBalance "none" }} gl *registry.GlobalLoading,{{end}}{{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.UseShowType}}{{end}} ) ( {{range .Outs}}{{.UseShowType}}, {{end}}*protocol.TenuredError ) {
+	{{.ClientBody}}
 }
 {{end}}
 
@@ -484,10 +495,9 @@ func New{{.Name}}Invoke(tenuredServer *protocol.TenuredServer, service {{$.TCD.A
 	return b.Bytes()
 }
 
-func NewServicesDef(lbs *LoadBalancesDef, typeDefs *TypesDef) *ServicesDef {
+func NewServicesDef(importDef *Imports, lbs *LoadBalancesDef, typeDefs *TypesDef) *ServicesDef {
 	return &ServicesDef{
-		LoadBalances: lbs,
-		Types:        typeDefs,
-		Services:     make([]ServiceDef, 0),
+		Imports: importDef, LoadBalances: lbs, Types: typeDefs,
+		Services: make([]ServiceDef, 0),
 	}
 }

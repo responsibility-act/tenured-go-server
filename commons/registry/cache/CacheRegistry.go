@@ -1,9 +1,14 @@
 package cache
 
-import "github.com/ihaiker/tenured-go-server/commons/registry"
+import (
+	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"reflect"
+)
 
 type CacheServiceRegistry struct {
 	reg registry.ServiceRegistry
+
+	cache map[uintptr]registry.RegistryNotifyListener
 
 	serverCache map[string][]*registry.ServerInstance
 }
@@ -17,7 +22,11 @@ func (this *CacheServiceRegistry) Unregister(serverId string) error {
 }
 
 func (this *CacheServiceRegistry) Subscribe(serverName string, listener registry.RegistryNotifyListener) error {
-	return this.reg.Subscribe(serverName, func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
+	pointer := reflect.ValueOf(listener).Pointer()
+	if _, has := this.cache[pointer]; has {
+		return nil
+	}
+	newLis := registry.RegistryNotifyListener(func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
 		listener(status, serverInstances)
 	L1:
 		for _, serverInstance := range serverInstances {
@@ -31,10 +40,17 @@ func (this *CacheServiceRegistry) Subscribe(serverName string, listener registry
 			}
 		}
 	})
+	this.cache[pointer] = newLis
+	return this.reg.Subscribe(serverName, newLis)
 }
 
 func (this *CacheServiceRegistry) Unsubscribe(serverName string, listener registry.RegistryNotifyListener) error {
-	return this.reg.Unsubscribe(serverName, listener)
+	pointer := reflect.ValueOf(listener).Pointer()
+	if l, has := this.cache[pointer]; has {
+		return this.reg.Unsubscribe(serverName, l)
+	} else {
+		return nil
+	}
 }
 
 func (this *CacheServiceRegistry) Lookup(serverName string, tags []string) ([]*registry.ServerInstance, error) {
@@ -52,6 +68,7 @@ func (this *CacheServiceRegistry) Lookup(serverName string, tags []string) ([]*r
 func NewCacheRegistry(reg registry.ServiceRegistry) registry.ServiceRegistry {
 	return &CacheServiceRegistry{
 		reg:         reg,
+		cache:       map[uintptr]registry.RegistryNotifyListener{},
 		serverCache: map[string][]*registry.ServerInstance{},
 	}
 }

@@ -55,6 +55,10 @@ type Search {
     Limit int
 }
 
+type SearchResult {
+    Accounts []Account
+}
+
 errors {
     AccountExists(2001,用户已经存在)
     AccountNotExists(2002,用户不存在)
@@ -74,4 +78,5 @@ service AccountService(2000) loadBalance(hash) {
     //根据用户ID获取用户
     Get(id uint64) (Account) error(AccountNotExists)
 
+    Search(Search) (SearchResult) loadBalance(none)
 }

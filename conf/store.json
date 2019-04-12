@@ -9,7 +9,7 @@
 	},
 	"tcp": {
 		"port": 6072,
-		"enableAuthPort": false,
+		"enableAutoPort": true,
 		"ignoredInterfaces": [
 			"docker0"
 		],

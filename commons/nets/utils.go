@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-func RandPort(start, end int) (int, error) {
+func RandPort(host string, start, end int) (int, error) {
 	for i := start; i <= end; i++ {
-		if lis, err := net.Listen("tcp", fmt.Sprintf(":%d", i)); err == nil {
+		if lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, i)); err == nil {
 			_ = lis.Close()
 			return i, nil
 		}

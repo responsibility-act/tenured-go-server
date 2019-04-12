@@ -40,6 +40,10 @@ func NewLoadBalance() *LoadBalancesDef {
 				Name: "round",
 				Fn:   "registry.NewRoundLoadBalance",
 			},
+			"none": {
+				Name: "none",
+				Fn:   "registry.NewNoneLoadBalance",
+			},
 		},
 	}
 }

@@ -14,7 +14,7 @@ type IpAndPort struct {
 	//使用端口
 	Port int `json:"port" yaml:"port"`
 	//当端口被占用的时候是否可以自动寻找新的端口，开始位置是Port。
-	EnableAuthPort bool `json:"enableAuthPort" yaml:"enableAuthPort"`
+	EnableAutoPort bool `json:"enableAutoPort" yaml:"enableAutoPort"`
 	autoPort       bool `json:"-"` //是否已经自动选择过了
 
 	//忽略网络
@@ -24,22 +24,19 @@ type IpAndPort struct {
 	PreferredNetworks []string `json:"preferredNetworks" yaml:"preferredNetworks"`
 }
 
-func (this *IpAndPort) getPort() (int, error) {
+func (this *IpAndPort) getPort(host string) (int, error) {
 	var err error
-	if this.EnableAuthPort {
+	if this.EnableAutoPort {
 		if this.autoPort {
 			return this.Port, nil
 		}
-		this.Port, err = RandPort(this.Port, 65535)
+		this.Port, err = RandPort(host, this.Port, 65535)
 	}
 	return this.Port, err
 }
 
 func (this *IpAndPort) GetAddress() (string, error) {
-	port, err := this.getPort()
-	if err != nil {
-		return "", err
-	}
+	var err error = nil
 	host := this.Bind
 	if host == "" {
 		host, err = GetLocalIP(this.IgnoredInterfaces, this.PreferredNetworks)
@@ -47,15 +44,17 @@ func (this *IpAndPort) GetAddress() (string, error) {
 			return "", err
 		}
 	}
+	port, err := this.getPort(host)
+	if err != nil {
+		return "", err
+	}
+
 	return fmt.Sprintf("%s:%d", host, port), nil
 }
 
 //获取公网地址
 func (this *IpAndPort) GetExternal() (string, error) {
-	port, err := this.getPort()
-	if err != nil {
-		return "", err
-	}
+	var err error = nil
 	host := this.External
 	if host == "" {
 		host, err = GetExternal()
@@ -63,5 +62,11 @@ func (this *IpAndPort) GetExternal() (string, error) {
 			return "", err
 		}
 	}
+
+	port, err := this.getPort(host)
+	if err != nil {
+		return "", err
+	}
+
 	return fmt.Sprintf("%s:%d", host, port), nil
 }

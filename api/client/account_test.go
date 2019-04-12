@@ -25,19 +25,19 @@ func Init() error {
 		}
 	}
 	server, _ = NewAccountServiceClient("tenured_store", reg)
-	return nil
+
+	return server.Start()
+}
+
+func Destory() {
+	commons.ShutdownIfService(reg, true)
+	server.Shutdown(true)
 }
 
 func TestNewAccount(t *testing.T) {
-	defer func() {
-		commons.ShutdownIfService(reg, true)
-		server.Shutdown(true)
-	}()
 	err := Init()
 	assert.Nil(t, err)
-
-	err = server.Start()
-	assert.Nil(t, err)
+	defer Destory()
 
 	id, _ := snowflake.NewSnowflake(snowflake.Settings{}).NextID()
 
@@ -53,4 +53,20 @@ func TestNewAccount(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Log(ac)
+}
+
+func TestAccountServiceClient_Search(t *testing.T) {
+	err := Init()
+	assert.Nil(t, err)
+	defer Destory()
+
+	gl := &registry.GlobalLoading{}
+	search := &api.Search{}
+	for gl.NextNode() {
+		rs, err := server.Search(gl, search)
+		assert.Nil(t, err)
+		t.Log("Search In: ", gl.Server.Id)
+		t.Log(rs)
+	}
+
 }

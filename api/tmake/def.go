@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 )
 
 var NotMatch = errors.New("not match")
@@ -43,6 +42,7 @@ func (def *Def) Interface(tcd *TCDInfo) []byte {
 	b.WriteString("package ")
 	b.WriteString(tcd.ApiPackageName)
 	b.WriteString("\n\n\n")
+
 	for _, module := range def.modules {
 		if inter, match := module.(Interface); match {
 			if bs := inter.InterOuter(tcd); bs != nil {
@@ -58,19 +58,6 @@ func (def *Def) Client(tcd *TCDInfo) []byte {
 	b.WriteString("package ")
 	b.WriteString(tcd.ClientPackageName)
 	b.WriteString("\n\n\n")
-
-	b.WriteString("import (\n")
-	for _, v := range []string{
-		tcd.ApiPackageUrl,
-		TenuredHome + "/commons/protocol",
-		TenuredHome + "/commons/registry",
-		TenuredHome + "/commons",
-		"time",
-	} {
-		b.WriteString(fmt.Sprintf(` "%s"`, v))
-		b.WriteString("\n")
-	}
-	b.WriteString(")\n")
 
 	for _, module := range def.modules {
 		if client, match := module.(Client); match {
@@ -89,19 +76,6 @@ func (def *Def) Invoke(tcd *TCDInfo) []byte {
 	b.WriteString(tcd.InvokePackageName)
 	b.WriteRune('\n')
 
-	b.WriteString("import (\n")
-	for _, v := range []string{
-		tcd.ApiPackageUrl,
-		TenuredHome + "/commons/protocol",
-		TenuredHome + "/commons/executors",
-		TenuredHome + "/commons/remoting",
-		TenuredHome + "/commons/logs",
-		"time",
-	} {
-		b.WriteString(fmt.Sprintf("    \"%s\"\n", v))
-	}
-	b.WriteString(")\n")
-
 	for _, module := range def.modules {
 		if client, match := module.(ServerInvoke); match {
 			if bs := client.InvokeOut(tcd); bs != nil {
@@ -113,15 +87,16 @@ func (def *Def) Invoke(tcd *TCDInfo) []byte {
 	return b.Bytes()
 }
 
-func NewDef() *Def {
+func NewDef(tcd *TCDInfo) *Def {
+	imports := NewImport(tcd)
 	lbs := NewLoadBalance()
-	typeDefs := NewTypes()
+	enums := NewEunms()
+	typeDefs := NewTypes(enums)
 	return &Def{
 		modules: []Module{
-			NewImport(),
-			NewErrors(),
-			NewEunms(), typeDefs,
-			lbs, NewServicesDef(lbs, typeDefs),
+			imports, NewErrors(),
+			enums, typeDefs,
+			lbs, NewServicesDef(imports, lbs, typeDefs),
 		},
 	}
 }
