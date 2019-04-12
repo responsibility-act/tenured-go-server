@@ -20,6 +20,11 @@ type Enums struct {
 	enums map[string]*EnumDef
 }
 
+func (e *Enums) HasEnum(name string) bool {
+	_, has := e.enums[name]
+	return has
+}
+
 func (this Enums) Add(addLines []string, info *TCDInfo) error {
 	desc, lines := comment(addLines)
 

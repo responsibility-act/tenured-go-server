@@ -69,7 +69,7 @@ func main() {
 
 		tcd := NewTCD(api)
 
-		def := NewDef()
+		def := NewDef(tcd)
 		for {
 			if lines, err := read.Read(); err == io.EOF {
 				break

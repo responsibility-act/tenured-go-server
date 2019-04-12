@@ -42,13 +42,15 @@ var StoreCmd = &cobra.Command{
 		logger = logs.GetLogger("store")
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		storeService = newStoreServer(storeCfg)
-		if err := storeService.Start(); err == nil {
+		err := storeService.Start()
+		if err == nil {
 			signal.Signal(func() {})
 		} else {
 			logger.Error(err.Error())
 		}
+		return err
 	},
 	PostRun: func(cmd *cobra.Command, args []string) {
 		if storeService != nil {

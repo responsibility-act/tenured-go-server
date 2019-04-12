@@ -7,13 +7,13 @@ import (
 )
 
 func TestRandPort(t *testing.T) {
-	port, err := RandPort(8080, 9090)
+	port, err := RandPort("", 8080, 9090)
 	assert.Nil(t, err)
 	assert.Equal(t, port, 8080)
 
 	lis, err := net.Listen("tcp", ":8080")
 	if err == nil {
-		port, err := RandPort(8080, 9090)
+		port, err := RandPort("", 8080, 9090)
 		assert.Nil(t, err)
 		assert.Equal(t, port, 8081)
 	} else {

@@ -5,6 +5,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
+	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -59,6 +60,10 @@ func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError)
 		}
 		return account, nil
 	}
+}
+
+func (this *AccountServer) Search(gl *registry.GlobalLoading, search *api.Search) (*api.SearchResult, *protocol.TenuredError) {
+	return &api.SearchResult{}, nil
 }
 
 func (this *AccountServer) Start() (err error) {

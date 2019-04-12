@@ -15,6 +15,7 @@ type FieldDef struct {
 	Desc   string
 	Type   string
 	Option string
+	Enums  *Enums
 }
 
 func (f *FieldDef) JsonName() string {
@@ -28,13 +29,28 @@ func (f *FieldDef) OmitEmpty() string {
 	return ""
 }
 
+func (f *FieldDef) ShowType() string {
+	if isBase(f.Type) {
+		return f.Type
+	} else if isArray(f.Type) {
+		return "[]*" + f.Type[2:]
+	} else if f.Enums.HasEnum(f.Type) {
+		return f.Type
+	} else {
+		return "*" + f.Type
+	}
+}
+
 type TypeDef struct {
 	Name   string
 	Desc   string
 	Fields []FieldDef
+
+	Enums *Enums
 }
 
 type TypesDef struct {
+	Enums *Enums
 	Types map[string]TypeDef
 }
 
@@ -48,6 +64,7 @@ func (this *TypesDef) Add(addLines []string, info *TCDInfo) error {
 		Name:   typeName,
 		Desc:   desc,
 		Fields: make([]FieldDef, 0),
+		Enums:  this.Enums,
 	}
 	lines = body(lines)
 
@@ -59,7 +76,8 @@ func (this *TypesDef) Add(addLines []string, info *TCDInfo) error {
 		}
 		fieldDef := typePattern.FindStringSubmatch(line)
 		typedef.Fields = append(typedef.Fields, FieldDef{
-			Name: fieldDef[1], Desc: desc, Type: fieldDef[2], Option: fieldDef[4],
+			Enums: this.Enums,
+			Name:  fieldDef[1], Desc: desc, Type: fieldDef[2], Option: fieldDef[4],
 		})
 	}
 	this.Types[typeName] = typedef
@@ -74,18 +92,18 @@ func (this *TypesDef) InterOuter(info *TCDInfo) []byte {
 type {{.Name}} struct {
 	{{range .Fields}}	
 	{{if ne .Desc ""}}{{.Desc}}{{end}}
-	{{.Name}} {{.Type}} !json:"{{.JsonName}}{{.OmitEmpty}}"!
+	{{.Name}} {{.ShowType}} !json:"{{.JsonName}}{{.OmitEmpty}}"!
 	{{end}}
 }
 {{end}}
 `))
-
 	_ = t.Execute(b, this)
 	return bytes.ReplaceAll(b.Bytes(), []byte{'!'}, []byte{'`'})
 }
 
-func NewTypes() *TypesDef {
+func NewTypes(enums *Enums) *TypesDef {
 	return &TypesDef{
 		Types: map[string]TypeDef{},
+		Enums: enums,
 	}
 }
