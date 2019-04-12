@@ -7,6 +7,7 @@ type ExecutorManager interface {
 
 	Get(name string) ExecutorService
 	Fix(name string, size, buffer int) ExecutorService
+	Single(name string, buffer int) ExecutorService
 }
 
 type defExecutorManager struct {
@@ -27,6 +28,16 @@ func (this *defExecutorManager) Fix(module string, size, buffer int) ExecutorSer
 		return executor
 	} else {
 		executor = NewFixedExecutorService(size, buffer)
+		this.executorMap[module] = executor
+		return executor
+	}
+}
+
+func (this *defExecutorManager) Single(module string, buffer int) ExecutorService {
+	if executor, has := this.executorMap[module]; has {
+		return executor
+	} else {
+		executor = NewSingleExecutorService(buffer)
 		this.executorMap[module] = executor
 		return executor
 	}

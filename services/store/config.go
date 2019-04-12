@@ -39,6 +39,6 @@ func NewStoreConfig() *storeConfig {
 			},
 			RemotingConfig: remoting.DefaultConfig(),
 		},
-		Executors: services.Executors(map[string]int{}),
+		Executors: services.Executors(map[string]string{}),
 	}
 }

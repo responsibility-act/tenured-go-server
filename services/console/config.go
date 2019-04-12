@@ -45,6 +45,6 @@ func NewConsoleConfig() *ConsoleConfig {
 			},
 			RemotingConfig: remoting.DefaultConfig(),
 		},
-		Executors: services.Executors(map[string]int{}),
+		Executors: services.Executors(map[string]string{}),
 	}
 }

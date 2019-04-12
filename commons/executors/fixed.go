@@ -6,11 +6,6 @@ import (
 	"sync"
 )
 
-type queueBucket struct {
-	fn func() interface{}
-	fu *future.SetFuture
-}
-
 type fixedExecutorService struct {
 	queue     chan *queueBucket
 	waitGroup *sync.WaitGroup
@@ -126,4 +121,8 @@ func NewFixedExecutorService(size int, queueSize int) ExecutorService {
 	}
 	service.start()
 	return service
+}
+
+func NewSingleExecutorService(queueSize int) ExecutorService {
+	return NewFixedExecutorService(1, queueSize)
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -31,19 +33,31 @@ type Tcp struct {
 	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 }
 
-type Executors map[string]int
+type ExecutorParam struct {
+	Type  string
+	Param []int
+}
 
-func (this *Executors) Get(key string, def int) int {
+type Executors map[string]string
+
+func (this *Executors) Get(key string) (*ExecutorParam, bool) {
 	if val, has := (*this)[key]; has {
-		return val
+		m := regexp.MustCompile(`(fix|single|scheduled)\((\d+),?(\d+)?\)`)
+		gs := m.FindStringSubmatch(val)
+
+		param := make([]int, len(gs[2:]))
+		for i := 0; i < len(gs[2:]); i++ {
+			param[i], _ = strconv.Atoi(gs[2+i])
+		}
+		return &ExecutorParam{Type: gs[1], Param: param}, true
 	}
-	return def
+	return nil, false
 }
 
 type Logs struct {
 	Level   string            `json:"level" yaml:"level"`
 	Path    string            `json:"path" yaml:"path"`
-	Output  string            `json:"Output" yaml:"Output"` //stdout,file
+	Output  string            `json:"output" yaml:"output"` //stdout,file
 	Archive bool              `json:"archive" yaml:"archive"`
 	Loggers map[string]string `json:"loggers" yaml:"loggers"`
 }

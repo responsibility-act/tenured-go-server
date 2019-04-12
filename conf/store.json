@@ -21,5 +21,8 @@
 	},
 	"logs": {
 		"output": "file"
+	},
+	"executors": {
+		"Snowflake": "fix(10,10)"
 	}
 }

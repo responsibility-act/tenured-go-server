@@ -15,24 +15,26 @@ type ServicesInvokeManager struct {
 	config *storeConfig
 
 	server *protocol.TenuredServer
+
+	executorManager executors.ExecutorManager
 }
 
-func NewServicesInvokeManager(config *storeConfig, server *protocol.TenuredServer) *ServicesInvokeManager {
+func NewServicesInvokeManager(config *storeConfig, server *protocol.TenuredServer, executorManager executors.ExecutorManager) *ServicesInvokeManager {
 	return &ServicesInvokeManager{
-		serviceManager: commons.NewServiceManager(),
-		config:         config,
-		server:         server,
+		serviceManager:  commons.NewServiceManager(),
+		config:          config,
+		server:          server,
+		executorManager: executorManager,
 	}
 }
 
 func (this *ServicesInvokeManager) Start() (err error) {
-	executorManager := executors.NewExecutorManager(executors.NewFixedExecutorService(100, 10000))
 	{
 		accountServer := dao.NewAccountServer(this.config.Data)
-		if err = invoke.NewAccountServiceInvoke(this.server, accountServer, executorManager); err != nil {
+		if err = invoke.NewAccountServiceInvoke(this.server, accountServer, this.executorManager); err != nil {
 			return
 		}
-		this.serviceManager.Add(executorManager, accountServer)
+		this.serviceManager.Add(this.executorManager, accountServer)
 	}
 
 	return this.serviceManager.Start()
