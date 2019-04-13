@@ -16,10 +16,10 @@ func init() {
 }
 
 func TestConsulServiceRegistry_Register(t *testing.T) {
-	plugin, has := registry.GetPlugins(config.Plugin)
-	assert.True(t, has)
 
-	sr, err := plugin.Registry(*config)
+	plugin, _ := NewRegistryPlugins(config)
+
+	sr, err := plugin.Registry()
 	assert.Nil(t, err)
 
 	err = sr.Subscribe("test", func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {

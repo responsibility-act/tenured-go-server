@@ -8,10 +8,9 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
-	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
-	"github.com/kataras/iris/core/errors"
+	"github.com/ihaiker/tenured-go-server/plugins"
 	"strconv"
 	"time"
 )
@@ -135,17 +134,11 @@ func (this *storeServer) ClusterID(serverName string) (uint64, uint64, error) {
 }
 
 func (this *storeServer) startRegistry() error {
-	//获取注册中心
-	pluginsConfig, err := registry.ParseConfig(this.config.Registry.Address)
+	registryPlugins, err := plugins.GetRegistryPlugins(this.config.Registry.Address)
 	if err != nil {
 		return err
 	}
-	plugins, has := registry.GetPlugins(pluginsConfig.Plugin)
-	if !has {
-		return errors.New("not found registry: " + this.config.Registry.Address)
-	}
-
-	if reg, err := plugins.Registry(*pluginsConfig); err != nil {
+	if reg, err := registryPlugins.Registry(); err != nil {
 		return err
 	} else {
 		this.registry = cache.NewCacheRegistry(reg)
@@ -158,7 +151,7 @@ func (this *storeServer) startRegistry() error {
 	if err != nil {
 		return err
 	}
-	if serverInstance, err := plugins.Instance(this.config.Registry.Attributes); err != nil {
+	if serverInstance, err := registryPlugins.Instance(this.config.Registry.Attributes); err != nil {
 		return err
 	} else {
 		serverInstance.Name = serverName

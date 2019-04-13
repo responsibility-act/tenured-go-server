@@ -232,7 +232,7 @@ func (this *ConsulServiceRegistry) removeSubscribe(name string, listener registr
 	return len(sets.listeners) == 0
 }
 
-func newRegistry(pluginConfig registry.PluginConfig) (*ConsulServiceRegistry, error) {
+func newRegistry(pluginConfig *registry.PluginConfig) (*ConsulServiceRegistry, error) {
 	config := &ConsulConfig{config: pluginConfig}
 	serviceRegistry := &ConsulServiceRegistry{
 		config:     config,

@@ -12,11 +12,9 @@ import (
 )
 
 func GetClusterService() (api.ClusterIdService, error) {
-	if config, err := registry.ParseConfig("consul://127.0.0.1:8500"); err != nil {
-		return nil, err
-	} else if plugins, has := registry.GetPlugins(config.Plugin); !has {
+	if plugins, err := registry.GetPlugins("consul://127.0.0.1:8500"); err != nil {
 		return nil, errors.New("no registry")
-	} else if reg, err := plugins.Registry(*config); err != nil {
+	} else if reg, err = plugins.Registry(); err != nil {
 		return nil, err
 	} else {
 		return NewClusterIdServiceClient("tenured_store", cache.NewCacheRegistry(reg))

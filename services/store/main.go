@@ -6,7 +6,6 @@ import (
 	"github.com/ihaiker/tenured-go-server/services"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var logger *logrus.Logger
@@ -25,10 +24,6 @@ var StoreCmd = &cobra.Command{
 		}
 		storeCfg = NewStoreConfig()
 		if err := services.LoadServerConfig("store", config, storeCfg); err != nil {
-			return err
-		}
-
-		if err = os.Chdir(storeCfg.Data); err != nil {
 			return err
 		}
 

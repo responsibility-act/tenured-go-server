@@ -15,12 +15,10 @@ var reg registry.ServiceRegistry
 var server *AccountServiceClient
 
 func Init() error {
-	if config, err := registry.ParseConfig("consul://127.0.0.1:8500"); err != nil {
-		return err
-	} else if plugins, has := registry.GetPlugins(config.Plugin); !has {
+	if plugins, err := registry.GetPlugins("consul://127.0.0.1:8500"); err != nil {
 		return errors.New("no registry")
 	} else {
-		if reg, err = plugins.Registry(*config); err != nil {
+		if reg, err = plugins.Registry(); err != nil {
 			return err
 		}
 	}

@@ -10,6 +10,7 @@ import (
 type ConsulRegistryPlugins struct {
 	lock     *sync.Mutex
 	registry registry.ServiceRegistry
+	config   *registry.PluginConfig
 }
 
 func (this *ConsulRegistryPlugins) Instance(config map[string]string) (*registry.ServerInstance, error) {
@@ -22,7 +23,7 @@ func (this *ConsulRegistryPlugins) Instance(config map[string]string) (*registry
 	return sInstance, nil
 }
 
-func (this *ConsulRegistryPlugins) Registry(config registry.PluginConfig) (registry.ServiceRegistry, error) {
+func (this *ConsulRegistryPlugins) Registry() (registry.ServiceRegistry, error) {
 	if this.registry != nil {
 		return this.registry, nil
 	}
@@ -33,17 +34,23 @@ func (this *ConsulRegistryPlugins) Registry(config registry.PluginConfig) (regis
 		return this.registry, nil
 	}
 
-	reg, err := newRegistry(config)
-	if err != nil {
+	if reg, err := newRegistry(this.config); err != nil {
 		return nil, err
+	} else {
+		this.registry = reg
+		return reg, nil
 	}
-	this.registry = reg
-	return reg, nil
 }
 
 var logger *logrus.Logger
 
 func init() {
-	logger = logs.GetLogger("consul.registry")
-	registry.AddPlugins("consul", &ConsulRegistryPlugins{lock: &sync.Mutex{}})
+	logger = logs.GetLogger("consul-registry")
+}
+
+func NewRegistryPlugins(config *registry.PluginConfig) (registry.Plugins, error) {
+	return &ConsulRegistryPlugins{
+		lock:   new(sync.Mutex),
+		config: config,
+	}, nil
 }

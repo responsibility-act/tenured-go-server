@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func Server(reg registry.RegistryPlugins) (commons.Service, error) {
+func Server(reg registry.Plugins) (commons.Service, error) {
 
 	config := remoting.DefaultConfig()
 	config.IdleTime = 1
