@@ -1,6 +1,12 @@
 {
 	"prefix": "tenured",
 	"data": "/data/tenured",
+	"store": {
+		"type": "leveldb",
+		"attributes": {
+			"dataPath": "/data/tenured"
+		}
+	},
 	"registry": {
 		"address": "consul://127.0.0.1:8500",
 		"attributes": {

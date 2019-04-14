@@ -72,7 +72,7 @@ func (this *TenuredCommand) MakeOneway() *TenuredCommand {
 }
 
 func (this *TenuredCommand) SetHeader(header interface{}) error {
-	if header == nil {
+	if commons.IsNil(header) {
 		return ErrNoHeader
 	}
 	if bs, err := json.Marshal(header); err != nil {
@@ -84,7 +84,7 @@ func (this *TenuredCommand) SetHeader(header interface{}) error {
 }
 
 func (this *TenuredCommand) GetHeader(header interface{}) error {
-	if this.header == nil || header == nil {
+	if commons.IsNil(this.header) || commons.IsNil(header) {
 		return ErrNoHeader
 	}
 	return json.Unmarshal(this.header, header)

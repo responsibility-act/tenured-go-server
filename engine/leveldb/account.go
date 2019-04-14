@@ -2,20 +2,35 @@ package leveldb
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var readOptions = &opt.ReadOptions{}
 var writeOptions = &opt.WriteOptions{Sync: true}
 
 const levelDBNotFound = "leveldb: not found"
+const (
+	MIN_ID = 10000000000000000
+	MAX_ID = 99999999999999999
+)
+
+func accountKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("A:%d", id))
+}
+func statusKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("S:%d", MAX_ID-id))
+}
 
 type AccountServer struct {
 	dataPath string
@@ -27,29 +42,30 @@ func NewAccountServer(dataPath string) *AccountServer {
 }
 
 func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
-	logger.Infof("申请用户：%v", account)
-	if storeAccount, err := this.Get(account.Id); err != nil {
-		return err
-	} else if storeAccount != nil {
+	logger.Debug("申请用户：", account)
+
+	if _, err := this.Get(account.Id); err != nil && err != api.ErrAccountNotExists {
 		return api.ErrAccountExists
 	}
-	account.Status = api.AccountStatusApply
 
-	if bs, err := json.Marshal(account); err != nil {
-		return protocol.ErrorDB(err)
-	} else if err := this.data.Put(commons.UInt64(account.Id), bs, writeOptions); err != nil {
+	account.Status = api.AccountStatusApply
+	bs, _ := json.Marshal(account)
+
+	//保存用户信息
+	batch := &leveldb.Batch{}
+	batch.Put(accountKey(account.Id), bs)
+	batch.Put(statusKey(account.Id), []byte(api.AccountStatusApply))
+	if err := this.data.Write(batch, writeOptions); err != nil {
 		return protocol.ErrorDB(err)
 	}
-
 	return nil
 }
 
 func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError) {
-	logger.Debug(" get user: ", id)
-
-	if val, err := this.data.Get(commons.UInt64(id), readOptions); err != nil {
+	logger.Debug("获取用户: ", id)
+	if val, err := this.data.Get(accountKey(id), readOptions); err != nil {
 		if err.Error() == levelDBNotFound {
-			return nil, nil
+			return nil, api.ErrAccountNotExists
 		} else {
 			return nil, protocol.ErrorDB(err)
 		}
@@ -63,7 +79,86 @@ func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError)
 }
 
 func (this *AccountServer) Search(gl *registry.GlobalLoading, search *api.Search) (*api.SearchResult, *protocol.TenuredError) {
-	return &api.SearchResult{}, nil
+	logger.Debug("搜索：", search)
+
+	if sn, err := this.data.GetSnapshot(); err != nil {
+		return nil, protocol.ConvertError(err)
+	} else {
+		sr := &api.SearchResult{Accounts: make([]*api.Account, 0)}
+
+		var startKey []byte
+		if search.StartId == 0 {
+			startKey = statusKey(MAX_ID - MIN_ID)
+		} else {
+			startKey = statusKey(search.StartId)
+		}
+
+		resultSize := 0
+		it := sn.NewIterator(&util.Range{Start: startKey}, readOptions)
+		defer it.Release()
+		for it.Next() && resultSize < search.Limit {
+			key := string(it.Key())
+			if !strings.HasPrefix(key, "S:") {
+				break
+			}
+			if "" != string(search.Status) &&
+				search.Status != api.AccountStatus(string(it.Value())) {
+				continue
+			}
+			id, _ := strconv.ParseUint(key[2:], 10, 64)
+			if search.StartId != 0 && search.StartId == MAX_ID-id {
+				continue
+			}
+			if account, err := this.Get(MAX_ID - id); err != nil {
+				return nil, err
+			} else {
+				resultSize++
+				sr.Accounts = append(sr.Accounts, account)
+			}
+		}
+		return sr, nil
+	}
+}
+
+func (this *AccountServer) Check(checkAccount *api.CheckAccount) *protocol.TenuredError {
+	if ac, err := this.Get(checkAccount.Id); err != nil {
+		return err
+	} else {
+		batch := &leveldb.Batch{}
+
+		statusKey := statusKey(ac.Id)
+
+		switch checkAccount.Status {
+		case api.AccountStatusOK:
+			{
+				batch.Delete(statusKey)
+			}
+		case api.AccountStatusReturn, api.AccountStatusDeny, api.AccountStatusDisable:
+			{
+				batch.Put(statusKey, []byte(checkAccount.Status))
+			}
+		}
+		ac.Status = checkAccount.Status
+		ac.StatusDescription = checkAccount.StatusDescription
+		ac.StatusTime = time.Now().Format("2006-01-02 15:04:05")
+
+		bs, _ := json.Marshal(ac)
+		batch.Put(accountKey(ac.Id), bs)
+		if err := this.data.Write(batch, writeOptions); err != nil {
+			return protocol.ErrorDB(err)
+		}
+		return nil
+	}
+}
+
+//根据手机号获取用户账户
+func (this *AccountServer) GetByMobile(mobile string) (*api.Account, *protocol.TenuredError) {
+	return nil, nil
+}
+
+//根据邮箱获取用户账户
+func (this *AccountServer) GetByEmail(email string) (*api.Account, *protocol.TenuredError) {
+	return nil, nil
 }
 
 func (this *AccountServer) Start() (err error) {

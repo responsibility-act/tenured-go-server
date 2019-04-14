@@ -32,7 +32,11 @@ func (this *TenuredClientInvoke) Invoke(
 	}
 	if respHeader != nil {
 		if err := response.GetHeader(respHeader); err != nil {
-			return nil, ConvertError(err)
+			if err == ErrNoHeader {
+				respHeader = nil
+			} else {
+				return nil, ConvertError(err)
+			}
 		}
 	}
 	return response.Body, nil

@@ -167,6 +167,10 @@ func (this *tenuredService) fastFailChannel(channel remoting.RemotingChannel) {
 	}
 }
 
+func (this *tenuredService) RegisterHock(hock remoting.Hock, fn func()) {
+	this.remoting.RegisterHock(hock, fn)
+}
+
 func (this *tenuredService) Start() error {
 	return this.remoting.Start()
 }

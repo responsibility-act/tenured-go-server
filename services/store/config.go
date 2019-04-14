@@ -19,9 +19,9 @@ type storeConfig struct {
 
 	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
 
-	Executors services.Executors `json:"executors"`
+	Executors services.Executors `json:"executors" yaml:"executors"`
 
-	Store *engine.StoreConfig
+	Store *engine.StoreConfig `json:"store" yaml:"store"`
 }
 
 func NewStoreConfig() *storeConfig {

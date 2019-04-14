@@ -16,36 +16,55 @@ import (
 )
 
 type storeServer struct {
-	config   *storeConfig
-	address  string
-	server   *protocol.TenuredServer
-	registry registry.ServiceRegistry
+	config  *storeConfig
+	address string
+
+	server          *protocol.TenuredServer
+	registry        registry.ServiceRegistry
+	registryPlugins registry.Plugins
 
 	serviceInvokeManager *ServicesInvokeManager
 
 	executorManager executors.ExecutorManager
 	snowflakeId     *snowflake.Snowflake
+
+	serviceManger *commons.ServiceManager
 }
 
-func (this *storeServer) initExecutorManager() executors.ExecutorManager {
-	manager := executors.NewExecutorManager(executors.NewFixedExecutorService(256, 10000))
+func (this *storeServer) init() error {
+	this.initExecutorManager()
+
+	if err := this.initRegistry(); err != nil {
+		return err
+	}
+	if err := this.initTenuredServer(); err != nil {
+		return err
+	}
+	if err := this.initServicesInvoke(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (this *storeServer) initExecutorManager() {
+	this.executorManager = executors.NewExecutorManager(executors.NewFixedExecutorService(256, 10000))
 
 	for k, _ := range this.config.Executors {
 		if ek, has := this.config.Executors.Get(k); has {
 			switch ek.Type {
 			case "fix":
-				manager.Fix(k, ek.Param[0], ek.Param[1])
+				this.executorManager.Fix(k, ek.Param[0], ek.Param[1])
 			case "single":
-				manager.Single(k, ek.Param[0])
+				this.executorManager.Single(k, ek.Param[0])
 			case "scheduled":
 
 			}
 		}
 	}
-	return manager
+	this.serviceManger.Add(this.executorManager)
 }
 
-func (this *storeServer) startTenuredServer() (err error) {
+func (this *storeServer) initTenuredServer() (err error) {
 	if this.address, err = this.config.Tcp.GetAddress(); err != nil {
 		return err
 	}
@@ -60,16 +79,25 @@ func (this *storeServer) startTenuredServer() (err error) {
 		Attributes: this.config.Tcp.Attributes,
 	}
 
-	if err = this.server.Start(); err != nil {
-		return
-	}
+	this.serviceManger.Add(this.server)
+	return nil
+}
 
-	this.executorManager = this.initExecutorManager()
+func (this *storeServer) initServicesInvoke() (err error) {
 	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.server, this.executorManager)
-	if err = this.serviceInvokeManager.Start(); err != nil {
-		return
-	}
-	return
+	this.serviceManger.Add(this.serviceInvokeManager)
+
+	this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
+		logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
+		response := protocol.NewACK(request.ID())
+		id, _ := this.snowflakeId.NextID()
+		response.Body = commons.UInt64(id)
+		if err := channel.Write(response, time.Millisecond*3000); err != nil {
+			logger.Error("snowflake write error: ", err)
+		}
+	}, this.executorManager.Get("Snowflake"))
+
+	return nil
 }
 
 func (this *storeServer) maxMachineId(serverName string) (uint16, error) {
@@ -133,7 +161,7 @@ func (this *storeServer) ClusterID(serverName string) (uint64, uint64, error) {
 	return clusterId, firstStartTime, nil
 }
 
-func (this *storeServer) startRegistry() error {
+func (this *storeServer) initRegistry() error {
 	registryPlugins, err := plugins.GetRegistryPlugins(this.config.Registry.Address)
 	if err != nil {
 		return err
@@ -142,8 +170,13 @@ func (this *storeServer) startRegistry() error {
 		return err
 	} else {
 		this.registry = cache.NewCacheRegistry(reg)
+		this.serviceManger.Add(reg)
 	}
+	this.registryPlugins = registryPlugins
+	return nil
+}
 
+func (this *storeServer) registryService() error {
 	//注册服务名称
 	serverName := this.config.Prefix + "_store"
 	//获取集群ID
@@ -151,7 +184,7 @@ func (this *storeServer) startRegistry() error {
 	if err != nil {
 		return err
 	}
-	if serverInstance, err := registryPlugins.Instance(this.config.Registry.Attributes); err != nil {
+	if serverInstance, err := this.registryPlugins.Instance(this.config.Registry.Attributes); err != nil {
 		return err
 	} else {
 		serverInstance.Name = serverName
@@ -170,41 +203,25 @@ func (this *storeServer) startRegistry() error {
 	return err
 }
 
-func (this *storeServer) registrySnowflake() {
-	this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
-		logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
-		response := protocol.NewACK(request.ID())
-		id, _ := this.snowflakeId.NextID()
-		response.Body = commons.UInt64(id)
-		if err := channel.Write(response, time.Millisecond*3000); err != nil {
-			logger.Error("snowflake write error: ", err)
-		}
-	}, this.executorManager.Get("Snowflake"))
-}
-
 func (this *storeServer) Start() error {
 	logger.Info("start store server.")
-	if err := this.startTenuredServer(); err != nil {
+	if err := this.init(); err != nil {
 		return err
 	}
-	if err := this.startRegistry(); err != nil {
+	if err := this.serviceManger.Start(); err != nil {
 		return err
 	}
-	this.registrySnowflake()
+	if err := this.registryService(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
-	commons.ShutdownIfService(this.registry, interrupt)
-	if this.serviceInvokeManager != nil {
-		this.serviceInvokeManager.Shutdown(interrupt)
-	}
-	if this.server != nil {
-		this.server.Shutdown(interrupt)
-	}
+	this.serviceManger.Shutdown(interrupt)
 }
 
 func newStoreServer(config *storeConfig) *storeServer {
-	return &storeServer{config: config}
+	return &storeServer{config: config, serviceManger: commons.NewServiceManager()}
 }

@@ -18,11 +18,11 @@ main:
 generate:
 	go generate api/generator.go
 
-plugin_registry_consul:
-	go build ${debug} -buildmode=plugin -o plugins/registry/consul.so ./commons/registry/consul
+plugin_registry_eureka:
+	go build ${debug} -buildmode=plugin -o plugins/registry/eureka.so ./commons/registry/eureka
 
-plugins: plugin_registry_consul
-
+plugins:
+	@echo "none plugins"
 
 install:
 	@mkdir -p distribution
@@ -33,15 +33,7 @@ install:
 upx:
 	upx -9 -k ${tenured}
 
-
-build:
-	go build -ldflags "-w -s" -buildmode=plugin -o engine.so testplugin.go
-
-install:
-	@echo "do nothing"
-
 .PHONY: clean
 clean:
-	@rm -rf plugins
 	@rm -rf bin
 	@rm -rf distribution

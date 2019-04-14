@@ -2,11 +2,11 @@ imports {
 }
 
 enum AccountStatus {
-    OK //执行成功
-    Apply //申请
-    Return //打回重新提交
+    OK      //执行成功
+    Apply   //申请
+    Return  //打回重新提交
     Deny    //拒绝
-    Disable
+    Disable //禁用
 }
 
 //账户信息
@@ -51,8 +51,26 @@ type Account {
 }
 
 type Search {
-    StartIdx string empty
+
+    //开始ID，如果第一页传入0
+    StartId uint64 empty
+
+    //当前状态，如果查询所有状态，传入空
+    Status AccountStatus
+
+    //搜索数据条数
     Limit int
+}
+
+type CheckAccount {
+    //账户ID
+    Id uint64
+
+    //审核状态
+    Status  AccountStatus
+
+    //审核结果描述
+    StatusDescription string  empty
 }
 
 type SearchResult {
@@ -78,5 +96,15 @@ service AccountService(2000) loadBalance(hash) {
     //根据用户ID获取用户
     Get(id uint64) (Account) error(AccountNotExists)
 
+    //搜索审核未通过或者审核被拒绝账号，时间倒叙排列
     Search(Search) (SearchResult) loadBalance(none)
+
+    //审核账户信息
+    Check(CheckAccount) ()
+
+    //根据手机号获取用户账户
+    GetByMobile(mobile string) (Account)
+
+    //根据邮箱获取用户账户
+    GetByEmail(email string) (Account)
 }

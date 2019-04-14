@@ -3,16 +3,15 @@ package client
 import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
-	_ "github.com/ihaiker/tenured-go-server/commons/registry/consul"
+	"github.com/ihaiker/tenured-go-server/plugins"
 	"github.com/kataras/iris/core/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func GetClusterService() (api.ClusterIdService, error) {
-	if plugins, err := registry.GetPlugins("consul://127.0.0.1:8500"); err != nil {
+	if plugins, err := plugins.GetRegistryPlugins("consul://127.0.0.1:8500"); err != nil {
 		return nil, errors.New("no registry")
 	} else if reg, err = plugins.Registry(); err != nil {
 		return nil, err

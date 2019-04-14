@@ -72,8 +72,8 @@ func (this *ServiceManager) Start() error {
 }
 
 func (this *ServiceManager) Shutdown(interrupt bool) {
-	for _, v := range this.services {
-		v.Shutdown(interrupt)
+	for i := len(this.services) - 1; i >= 0; i-- {
+		this.services[i].Shutdown(interrupt)
 	}
 }
 
