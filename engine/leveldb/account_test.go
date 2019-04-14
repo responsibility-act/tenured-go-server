@@ -1,4 +1,4 @@
-package dao
+package leveldb
 
 import (
 	"github.com/ihaiker/tenured-go-server/api"

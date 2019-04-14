@@ -11,7 +11,7 @@ import (
 	"plugin"
 )
 
-var logger = logs.GetLogger("registry")
+var logger = logs.GetLogger("plugins")
 
 func GetRegistryPlugins(registryConfig string) (registry.Plugins, error) {
 	if config, err := registry.ParseConfig(registryConfig); err != nil {

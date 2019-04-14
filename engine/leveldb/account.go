@@ -1,4 +1,4 @@
-package dao
+package leveldb
 
 import (
 	"encoding/json"

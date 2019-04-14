@@ -4,6 +4,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/services"
 )
 
@@ -19,6 +20,8 @@ type storeConfig struct {
 	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
 
 	Executors services.Executors `json:"executors"`
+
+	Store *engine.StoreConfig
 }
 
 func NewStoreConfig() *storeConfig {
@@ -38,6 +41,12 @@ func NewStoreConfig() *storeConfig {
 				Port: mixins.GetInt("tenured.store.port", 6072),
 			},
 			RemotingConfig: remoting.DefaultConfig(),
+		},
+		Store: &engine.StoreConfig{
+			Type: "leveldb",
+			Attributes: map[string]string{
+				"dataPath": mixins.Get(mixins.KeyDataPath, mixins.DataPath),
+			},
 		},
 		Executors: services.Executors(map[string]string{}),
 	}

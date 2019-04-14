@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 version=1.0.0
 build_date=`date +"%F %T"`
 param=-X main.VERSION=${version} -X 'main.BUILD_TIME=${build_date}' -X 'main.GO_VERSION=`go version`'
@@ -33,7 +32,6 @@ install:
 
 upx:
 	upx -9 -k ${tenured}
-=======
 
 
 build:
@@ -41,7 +39,6 @@ build:
 
 install:
 	@echo "do nothing"
->>>>>>> origin/master
 
 .PHONY: clean
 clean:
