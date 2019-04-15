@@ -16,10 +16,6 @@ import (
 	"time"
 )
 
-var readOptions = &opt.ReadOptions{}
-var writeOptions = &opt.WriteOptions{Sync: true}
-
-const levelDBNotFound = "leveldb: not found"
 const (
 	MIN_ID = 10000000000000000
 	MAX_ID = 99999999999999999
@@ -37,8 +33,11 @@ type AccountServer struct {
 	data     *leveldb.DB
 }
 
-func NewAccountServer(dataPath string) *AccountServer {
-	return &AccountServer{dataPath: dataPath + "/store/account"}
+func NewAccountServer(dataPath string) (*AccountServer, error) {
+	accountServer := &AccountServer{
+		dataPath: dataPath + "/store/account",
+	}
+	return accountServer, nil
 }
 
 func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
@@ -151,21 +150,14 @@ func (this *AccountServer) Check(checkAccount *api.CheckAccount) *protocol.Tenur
 	}
 }
 
-//根据手机号获取用户账户
-func (this *AccountServer) GetByMobile(mobile string) (*api.Account, *protocol.TenuredError) {
-	return nil, nil
-}
-
-//根据邮箱获取用户账户
-func (this *AccountServer) GetByEmail(email string) (*api.Account, *protocol.TenuredError) {
-	return nil, nil
-}
-
 func (this *AccountServer) Start() (err error) {
+	logger.Debug("start accout store.")
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
+		logger.Error("start account store error: ", err)
 		return
 	}
 	if this.data, err = leveldb.OpenFile(this.dataPath, &opt.Options{Comparer: comparer.DefaultComparer}); err != nil {
+		logger.Error("start account store error: ", err)
 		return err
 	}
 	return nil

@@ -81,6 +81,7 @@ errors {
     AccountExists(2001,用户已经存在)
     AccountNotExists(2002,用户不存在)
     MobileExists(2003,手机号已被占用)
+    EmailExists(2004,邮箱已经被占用)
 }
 
 loadBalance {
@@ -101,10 +102,4 @@ service AccountService(2000) loadBalance(hash) {
 
     //审核账户信息
     Check(CheckAccount) ()
-
-    //根据手机号获取用户账户
-    GetByMobile(mobile string) (Account)
-
-    //根据邮箱获取用户账户
-    GetByEmail(email string) (Account)
 }

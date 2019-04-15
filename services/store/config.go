@@ -13,6 +13,8 @@ type storeConfig struct {
 
 	Data string `json:"data" yaml:"data"` //数据存储位置
 
+	Stores []string `json:"stores" yaml:"stores"`
+
 	Logs *services.Logs `json:"logs" json:"logs"`
 
 	Registry *services.Registry `json:"registry" yaml:"registry"` //注册中心
@@ -21,13 +23,23 @@ type storeConfig struct {
 
 	Executors services.Executors `json:"executors" yaml:"executors"`
 
-	Store *engine.StoreConfig `json:"store" yaml:"store"`
+	Engine *engine.StoreEngineConfig `json:"engine" yaml:"engine"`
+}
+
+func (this *storeConfig) HasStore(name string) bool {
+	for _, store := range this.Stores {
+		if store == name {
+			return true
+		}
+	}
+	return false
 }
 
 func NewStoreConfig() *storeConfig {
 	return &storeConfig{
 		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
 		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
+		Stores: []string{"account", "user", "search"},
 		Logs: &services.Logs{
 			Level:  "info",
 			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/store.log",
@@ -42,7 +54,7 @@ func NewStoreConfig() *storeConfig {
 			},
 			RemotingConfig: remoting.DefaultConfig(),
 		},
-		Store: &engine.StoreConfig{
+		Engine: &engine.StoreEngineConfig{
 			Type: "leveldb",
 			Attributes: map[string]string{
 				"dataPath": mixins.Get(mixins.KeyDataPath, mixins.DataPath),

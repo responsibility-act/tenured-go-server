@@ -299,6 +299,7 @@ func NameAndType(p string) (string, string) {
 }
 
 type ServiceDef struct {
+	StoreTag           string
 	Name               string
 	Desc               string
 	StartCode          uint16
@@ -323,7 +324,8 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 	}
 	startCode, _ := strconv.ParseUint(gs[2], 10, 16)
 	serviceDef := ServiceDef{
-		Name: gs[1], Desc: desc,
+		StoreTag: info.Name,
+		Name:     gs[1], Desc: desc,
 		StartCode: uint16(startCode), Funcs: make([]FuncDef, 0),
 		DefaultLoadBalance: gs[4], DefinedLoadBalance: map[string]string{},
 	}
@@ -414,7 +416,7 @@ type {{.Name}} interface {
 	return b.Bytes()
 }
 
-func (this *ServicesDef) ClientOut(tcd *TCDInfo) []byte {
+func (this *ServicesDef) ClientOuter(tcd *TCDInfo) []byte {
 	b := new(bytes.Buffer)
 	t := template.Must(template.New("letter").Parse(`
 {{range $i,$s  := .Services}}
@@ -454,7 +456,7 @@ func New{{.Name}}Client(serverName string, reg registry.ServiceRegistry) (*{{.Na
 	client.serviceManager.Add(client.TenuredClientInvoke)
 
 	{{range $name,$v := .DefinedLoadBalance}}
-	client.{{$name}}LB = {{$v}}(serverName,reg)
+	client.{{$name}}LB = {{$v}}(serverName,"{{$s.StoreTag}}",reg)
 	client.serviceManager.Add(client.{{$name}}LB)
 	{{end}}
 
@@ -466,7 +468,7 @@ func New{{.Name}}Client(serverName string, reg registry.ServiceRegistry) (*{{.Na
 	return b.Bytes()
 }
 
-func (this *ServicesDef) InvokeOut(tcd *TCDInfo) []byte {
+func (this *ServicesDef) InvokeOuter(tcd *TCDInfo) []byte {
 	this.TCD = tcd
 	b := new(bytes.Buffer)
 	ftl(`

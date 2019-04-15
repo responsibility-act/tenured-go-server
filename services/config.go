@@ -20,10 +20,6 @@ type Registry struct {
 	Address string `json:"address" yaml:"address"`
 	//注册服务与注册中心的参数配置
 	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-
-	//注册服务的元数据
-	Metadata map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	Tags     []string          `json:"tags,omitempty" yaml:"tags,omitempty"`
 }
 
 type Tcp struct {

@@ -33,6 +33,19 @@ type ServerInstance struct {
 	Status string
 }
 
+func (this ServerInstance) HasTag(tagName string) bool {
+	if this.Tags == nil || len(this.Tags) == 0 {
+		return false
+	}
+	for _, tag := range this.Tags {
+		if tagName == tag {
+			return true
+		}
+
+	}
+	return false
+}
+
 func (this ServerInstance) String() string {
 	return fmt.Sprintf("[%s] %s(%s) %s", this.Status, this.Name, this.Address, this.Id)
 }

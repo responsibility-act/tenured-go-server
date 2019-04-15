@@ -61,6 +61,7 @@ func (this *ConsulServiceRegistry) Register(serverInstance *registry.ServerInsta
 			ID:      serverInstance.Id,   // 服务节点的名称
 			Name:    serverInstance.Name, // 服务名称
 			Meta:    serverInstance.Metadata,
+			Tags:    serverInstance.Tags,
 			Address: host, Port: port, // 服务 IP:端口
 			Check: check,
 		}

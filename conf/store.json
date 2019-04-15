@@ -1,7 +1,7 @@
 {
 	"prefix": "tenured",
 	"data": "/data/tenured",
-	"store": {
+	"engine": {
 		"type": "leveldb",
 		"attributes": {
 			"dataPath": "/data/tenured"

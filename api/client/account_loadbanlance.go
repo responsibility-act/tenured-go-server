@@ -11,10 +11,17 @@ func accountSnowflakeExport(requestCode uint16, obj ...interface{}) uint64 {
 		return obj[0].(*api.Account).Id
 	case api.AccountServiceGet:
 		return obj[0].(uint64)
+		//case api.AccountServiceGetByMobile, api.AccountServiceGetByEmail:
+		//	mobileOrEmail := obj[0].(string)
+		//	return crc64.Checksum([]byte(mobileOrEmail), crc64.MakeTable(crc64.ECMA))
 	}
 	return 0
 }
 
-func HashLoadBalance(serverName string, registration registry.ServiceRegistry) registry.LoadBalance {
-	return registry.NewTimedHashLoadBalance(serverName, registration, 100, accountSnowflakeExport)
+func HashLoadBalance(serverName, serverTag string, registration registry.ServiceRegistry) registry.LoadBalance {
+	return registry.NewTimedHashLoadBalance(serverName, serverTag, registration, 100, accountSnowflakeExport)
+}
+
+func SearchLoadBalance(serverName, serverTag string, registration registry.ServiceRegistry) registry.LoadBalance {
+	return nil
 }

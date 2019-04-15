@@ -14,6 +14,8 @@ const TenuredHome = "github.com/ihaiker/tenured-go-server"
 type TCDInfo struct {
 	TCDFile string
 
+	Name string
+
 	ApiFileName    string
 	ApiPackageName string
 	ApiPackageUrl  string
@@ -33,6 +35,8 @@ func NewTCD(tcdFile string) *TCDInfo {
 
 	dir := filepath.Dir(tcdFile)
 	name := strings.Replace(filepath.Base(tcdFile), ".tcd", "", 1)
+
+	tcd.Name = name
 
 	tcd.ApiFileName = dir + "/" + name + "_tcd.go"
 	tcd.ApiPackageName = filepath.Base(dir)

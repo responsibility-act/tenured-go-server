@@ -5,46 +5,65 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
+	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/engine"
 )
 
 type ServicesInvokeManager struct {
 	//需要执行关闭的服务
-	serviceManager *commons.ServiceManager
-
 	config *storeConfig
+
+	reg registry.ServiceRegistry
 
 	server *protocol.TenuredServer
 
 	executorManager executors.ExecutorManager
+
+	storePlugins engine.StorePlugins
+
+	serverManager *commons.ServiceManager
 }
 
-func NewServicesInvokeManager(config *storeConfig, server *protocol.TenuredServer, executorManager executors.ExecutorManager) *ServicesInvokeManager {
+func NewServicesInvokeManager(config *storeConfig, reg registry.ServiceRegistry, server *protocol.TenuredServer, executorManager executors.ExecutorManager) *ServicesInvokeManager {
 	return &ServicesInvokeManager{
-		serviceManager:  commons.NewServiceManager(),
+		reg:             reg,
 		config:          config,
 		server:          server,
 		executorManager: executorManager,
+		serverManager:   commons.NewServiceManager(),
 	}
 }
 
-func (this *ServicesInvokeManager) Start() error {
-	storePlugins, err := engine.GetStorePlugins(this.config.Store)
+func (this *ServicesInvokeManager) Start() (err error) {
+	storeServerName := this.config.Prefix + "_store"
+	this.storePlugins, err = engine.GetStorePlugins(storeServerName, this.config.Engine, this.reg)
 	if err != nil {
 		return err
 	}
 
-	{
-		accountServer := storePlugins.Account()
-		if err := invoke.NewAccountServiceInvoke(this.server, accountServer, this.executorManager); err != nil {
+	if this.config.HasStore("account") {
+		if service, err := this.storePlugins.Account(); err != nil {
 			return err
+		} else if err := invoke.NewAccountServiceInvoke(this.server, service, this.executorManager); err != nil {
+			return err
+		} else {
+			this.serverManager.Add(service)
 		}
-		this.serviceManager.Add(this.executorManager, accountServer)
 	}
 
-	return this.serviceManager.Start()
+	if this.config.HasStore("search") {
+		if service, err := this.storePlugins.Search(); err != nil {
+			return err
+		} else if err := invoke.NewSearchServiceInvoke(this.server, service, this.executorManager); err != nil {
+			return err
+		} else {
+			this.serverManager.Add(service)
+		}
+	}
+
+	return this.serverManager.Start()
 }
 
 func (this *ServicesInvokeManager) Shutdown(interrupt bool) {
-	this.serviceManager.Shutdown(interrupt)
+	this.serverManager.Shutdown(interrupt)
 }

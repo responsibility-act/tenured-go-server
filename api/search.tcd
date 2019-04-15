@@ -1,0 +1,22 @@
+
+errors {
+    SearchExists(1900,搜索内容已经存在)
+    SearchNotExists(1901,搜索内容不存在)
+}
+
+loadBalance {
+    search SearchLoadBalance
+}
+
+//全局搜索服务
+service SearchService(1900) loadBalance(search){
+
+    //保存搜索内容
+    Put(key string,value []byte) ()
+
+    //获取搜索内容，返回内容就是搜索内容
+    Get(key string) ([]byte)
+
+    //删除搜索
+    Remove(key string) ()
+}

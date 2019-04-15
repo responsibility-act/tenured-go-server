@@ -20,6 +20,8 @@ type TimedHashLoadBalance struct {
 	//注册服务的名称
 	serverName string
 
+	serverTag string
+
 	//注册中心管理器
 	registration ServiceRegistry
 
@@ -48,7 +50,7 @@ func (this *TimedHashLoadBalance) addSerInstance(instance *ServerInstance) {
 }
 
 func (this *TimedHashLoadBalance) Start() error {
-	ss, err := this.registration.Lookup(this.serverName, nil)
+	ss, err := this.registration.Lookup(this.serverName, []string{this.serverTag})
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,9 @@ func (this *TimedHashLoadBalance) Start() error {
 func (this *TimedHashLoadBalance) onNotify(status RegistionStatus, serverInstances []*ServerInstance) {
 	for _, si := range serverInstances {
 		if status == REGISTER {
-			this.addSerInstance(si)
+			if si.HasTag(this.serverTag) {
+				this.addSerInstance(si)
+			}
 		} else if saveIs, has := this.serverInstances[si.Id]; has {
 			saveIs.Status = status.String()
 		}
@@ -99,11 +103,13 @@ func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]*ServerInstance,
 
 func (this *TimedHashLoadBalance) Return(key string) {}
 
-func NewTimedHashLoadBalance(serverName string, registration ServiceRegistry, virtualNum int, snowflakeExport SnowflakeExport) LoadBalance {
+func NewTimedHashLoadBalance(serverName string, serverTag string, registration ServiceRegistry, virtualNum int, snowflakeExport SnowflakeExport) LoadBalance {
 	hlb := &TimedHashLoadBalance{
-		serverName: serverName, registration: registration,
+		serverName: serverName, serverTag: serverTag, registration: registration,
+
 		snowflakeExport: snowflakeExport, table: crc64.MakeTable(crc64.ECMA),
 		virtualNum: virtualNum, tree: treemap.NewWith(utils.UInt64Comparator),
+
 		serverInstances: map[string]*ServerInstance{},
 	}
 	return hlb

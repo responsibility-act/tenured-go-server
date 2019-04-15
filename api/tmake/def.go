@@ -16,11 +16,11 @@ type Interface interface {
 }
 
 type Client interface {
-	ClientOut(info *TCDInfo) []byte
+	ClientOuter(info *TCDInfo) []byte
 }
 
 type ServerInvoke interface {
-	InvokeOut(info *TCDInfo) []byte
+	InvokeOuter(info *TCDInfo) []byte
 }
 
 type Def struct {
@@ -61,7 +61,7 @@ func (def *Def) Client(tcd *TCDInfo) []byte {
 
 	for _, module := range def.modules {
 		if client, match := module.(Client); match {
-			if bs := client.ClientOut(tcd); bs != nil {
+			if bs := client.ClientOuter(tcd); bs != nil {
 				b.Write(bs)
 			}
 		}
@@ -78,7 +78,7 @@ func (def *Def) Invoke(tcd *TCDInfo) []byte {
 
 	for _, module := range def.modules {
 		if client, match := module.(ServerInvoke); match {
-			if bs := client.InvokeOut(tcd); bs != nil {
+			if bs := client.InvokeOuter(tcd); bs != nil {
 				b.Write(bs)
 			}
 		}

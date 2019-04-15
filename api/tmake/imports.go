@@ -82,7 +82,7 @@ import (
 	return b.Bytes()
 }
 
-func (this *Imports) ClientOut(info *TCDInfo) []byte {
+func (this *Imports) ClientOuter(info *TCDInfo) []byte {
 	b := new(bytes.Buffer)
 	ftl(`
 import (
@@ -95,7 +95,7 @@ import (
 	return b.Bytes()
 }
 
-func (this *Imports) InvokeOut(info *TCDInfo) []byte {
+func (this *Imports) InvokeOuter(info *TCDInfo) []byte {
 	b := new(bytes.Buffer)
 	ftl(`
 import (

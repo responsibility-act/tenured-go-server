@@ -2,43 +2,46 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/engine/leveldb"
+	"github.com/ihaiker/tenured-go-server/commons/logs"
+	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/runtime"
+	"path/filepath"
+	"plugin"
 )
 
-type StoreConfig struct {
+type StoreEngineConfig struct {
 	Type       string            `json:"type" yaml:"type"`
 	Attributes map[string]string `json:"attributes" yaml:"attributes"`
 }
 
+var logger = logs.GetLogger("plugins")
+
 type StorePlugins interface {
-	Account() api.AccountService
-	User() api.UserService
+	Account() (api.AccountService, error)
+	User() (api.UserService, error)
+	Search() (api.SearchService, error)
 }
 
-type levelDBStorePlugins struct {
-	account api.AccountService
-	user    api.UserService
-}
-
-func (this *levelDBStorePlugins) Account() api.AccountService {
-	return this.account
-}
-
-func (this *levelDBStorePlugins) User() api.UserService {
-	return this.user
-}
-
-func newLevelDBStore(config *StoreConfig) (StorePlugins, error) {
-	store := &levelDBStorePlugins{}
-	store.account = leveldb.NewAccountServer(config.Attributes["dataPath"])
-	return store, nil
-}
-
-func GetStorePlugins(storeConfig *StoreConfig) (StorePlugins, error) {
+func GetStorePlugins(storeServiceName string, storeConfig *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
 	if storeConfig.Type == "leveldb" {
-		return newLevelDBStore(storeConfig)
+		return newLevelDBStore(storeServiceName, storeConfig, reg)
 	} else {
-		return nil, errors.New("not support store: " + storeConfig.Type)
+		return loadStorePlugin(storeServiceName, storeConfig, reg)
+	}
+}
+
+func loadStorePlugin(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
+	pluginFile, _ := filepath.Abs(fmt.Sprintf("%s/../plugins/store/%s.%s", runtime.GetBinDir(), config.Type, runtime.GetLibraryExt()))
+	logger.Debug("load store plugins: ", config.Type, " ", pluginFile)
+	if p, err := plugin.Open(pluginFile); err != nil {
+		return nil, err
+	} else if fn, err := p.Lookup("NewStorePlugins"); err != nil {
+		return nil, err
+	} else if newStorePlugins, match := fn.(func(string, *StoreEngineConfig, registry.ServiceRegistry) (StorePlugins, error)); match {
+		return newStorePlugins(storeServiceName, config, reg)
+	} else {
+		return nil, errors.New("can't found registry plugin in: " + pluginFile)
 	}
 }

@@ -84,7 +84,7 @@ func (this *storeServer) initTenuredServer() (err error) {
 }
 
 func (this *storeServer) initServicesInvoke() (err error) {
-	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.server, this.executorManager)
+	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.registry, this.server, this.executorManager)
 	this.serviceManger.Add(this.serviceInvokeManager)
 
 	this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
@@ -190,12 +190,10 @@ func (this *storeServer) registryService() error {
 		serverInstance.Name = serverName
 		serverInstance.Id = fmt.Sprintf("%d", clusterId)
 		serverInstance.Address = this.address
-		serverInstance.Metadata = this.config.Registry.Metadata
-		if serverInstance.Metadata == nil {
-			serverInstance.Metadata = map[string]string{}
+		serverInstance.Metadata = map[string]string{
+			"FirstStartTime": fmt.Sprintf("%d", firstStartTime),
 		}
-		serverInstance.Metadata["FirstStartTime"] = fmt.Sprintf("%d", firstStartTime)
-		serverInstance.Tags = this.config.Registry.Tags
+		serverInstance.Tags = this.config.Stores
 		if err := this.registry.Register(serverInstance); err != nil {
 			return err
 		}

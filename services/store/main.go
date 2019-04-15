@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/runtime/signal"
 	"github.com/ihaiker/tenured-go-server/services"
@@ -25,6 +26,10 @@ var StoreCmd = &cobra.Command{
 		storeCfg = NewStoreConfig()
 		if err := services.LoadServerConfig("store", config, storeCfg); err != nil {
 			return err
+		}
+
+		if len(storeCfg.Stores) == 0 {
+			return errors.New("the store is nil!")
 		}
 
 		if err = logs.InitLogger(

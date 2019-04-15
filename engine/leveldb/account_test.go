@@ -10,7 +10,7 @@ import (
 
 var dataDir = "/data/tenured"
 
-var accountService = NewAccountServer(dataDir)
+var accountService, _ = NewAccountServer(dataDir)
 var ID uint64 = 19416244780269568
 var sf = snowflake.NewSnowflake(snowflake.Settings{MachineID: 0})
 
