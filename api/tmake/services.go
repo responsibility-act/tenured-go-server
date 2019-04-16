@@ -106,23 +106,24 @@ func (this *FuncDef) TimeoutDuration() string {
 func (this *FuncDef) ClientBody() string {
 	b := new(bytes.Buffer)
 
-	loadBanlanceParam := this.tcd.ApiPackageName + "." + this.serviceDef.Name + this.Name
+	requestCode := fmt.Sprintf("%s.%s%s", this.tcd.ApiPackageName, this.serviceDef.Name, this.Name)
+	loadBalanceParam := requestCode
 	if this.LoadBalance == "none" {
-		loadBanlanceParam += ",gl"
+		loadBalanceParam += ",gl"
 	}
 	if len(this.Ins) > 0 {
 		for _, v := range this.Ins {
-			loadBanlanceParam += "," + v.Name
+			loadBalanceParam += "," + v.Name
 		}
 	}
 
 	b.WriteString(fmt.Sprintf(`
-			serverInstance,regKey, err := this.%sLB.Select(%s)
+			serverInstance,regKey, err := this.loadBalance.Select(%s)
 			if err != nil || len(serverInstance) == 0 || registry.AllNotOK(serverInstance...) {
 				return %s protocol.ErrorRouter()
 			}
-			defer this.%sLB.Return(regKey)
-		`, this.LoadBalance, loadBanlanceParam, strings.Repeat("nil,", len(this.Outs)), this.LoadBalance,
+			defer this.loadBalance.Return(%s,regKey)
+		`, loadBalanceParam, strings.Repeat("nil,", len(this.Outs)), requestCode,
 	))
 
 	//header
@@ -160,7 +161,6 @@ func (this *FuncDef) ClientBody() string {
 	}
 
 	//invoke
-	requestCode := fmt.Sprintf("%s.%s%s", this.tcd.ApiPackageName, this.serviceDef.Name, this.Name)
 	timeoutMillisecond := this.TimeoutDuration()
 	outLength := len(this.Outs)
 	if outLength == 0 {
@@ -293,27 +293,24 @@ func (this *FuncDef) InvokeBody() string {
 func NameAndType(p string) (string, string) {
 	nt := strings.SplitN(p, " ", 2)
 	if len(nt) == 2 {
-		return nt[0], nt[1]
+		return trim(nt[0]), trim(nt[1])
 	}
 	return lowerName(p), p
 }
 
 type ServiceDef struct {
-	StoreTag           string
-	Name               string
-	Desc               string
-	StartCode          uint16
-	Funcs              []FuncDef
-	DefaultLoadBalance string
-	DefinedLoadBalance map[string]string
+	StoreTag  string
+	Name      string
+	Desc      string
+	StartCode uint16
+	Funcs     []FuncDef
 }
 
 type ServicesDef struct {
-	Imports      *Imports
-	LoadBalances *LoadBalancesDef
-	Types        *TypesDef
-	TCD          *TCDInfo
-	Services     []ServiceDef
+	Imports  *Imports
+	Types    *TypesDef
+	TCD      *TCDInfo
+	Services []ServiceDef
 }
 
 func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
@@ -327,11 +324,6 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 		StoreTag: info.Name,
 		Name:     gs[1], Desc: desc,
 		StartCode: uint16(startCode), Funcs: make([]FuncDef, 0),
-		DefaultLoadBalance: gs[4], DefinedLoadBalance: map[string]string{},
-	}
-
-	if serviceDef.DefaultLoadBalance != "" {
-		serviceDef.DefinedLoadBalance[serviceDef.DefaultLoadBalance] = this.LoadBalances.New(serviceDef.DefaultLoadBalance)
 	}
 
 	lines = body(lines)
@@ -356,26 +348,19 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 		}
 
 		funDef.LoadBalance = gs[7]
-		if funDef.LoadBalance == "" {
-			funDef.LoadBalance = serviceDef.DefaultLoadBalance
-		}
-		if funDef.LoadBalance == "" {
-			return errors.New(fmt.Sprintf("服务 %s.%s() 方法未定义负载器", serviceDef.Name, funDef.Name))
-		}
 		if gs[9] != "" {
 			funDef.Timeout = gs[9]
 		}
 
 		if funDef.LoadBalance == "none" {
-			this.Imports.AddInterface(TenuredHome+"/commons/registry", "")
+			this.Imports.AddInterface(TenuredHome+"/commons/registry/load_balance", "")
 		}
-		serviceDef.DefinedLoadBalance[funDef.LoadBalance] = this.LoadBalances.New(funDef.LoadBalance)
 
 		if trim(gs[2]) != "" {
 			ins := strings.Split(gs[2], ",")
 			funDef.Ins = make([]FunParam, len(ins))
 			for i, in := range ins {
-				pName, pType := NameAndType(in)
+				pName, pType := NameAndType(trim(in))
 				funDef.Ins[i] = FunParam{Name: pName, Type: pType, tcd: info}
 			}
 		}
@@ -410,7 +395,7 @@ var (
 type {{.Name}} interface {
 	{{range .Funcs}}
 	{{.Desc}}
-	{{.Name}}({{if eq .LoadBalance "none" }} gl *registry.GlobalLoading,{{end}} {{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.ShowType}}{{end}} ) ( {{range .Outs}}{{.ShowType}}, {{end}}*protocol.TenuredError )
+	{{.Name}}({{if eq .LoadBalance "none" }} gl *load_balance.GlobalLoading,{{end}} {{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.ShowType}}{{end}} ) ( {{range .Outs}}{{.ShowType}}, {{end}}*protocol.TenuredError )
 	{{end}}
 }{{end}}`, this, b)
 	return b.Bytes()
@@ -422,12 +407,11 @@ func (this *ServicesDef) ClientOuter(tcd *TCDInfo) []byte {
 {{range $i,$s  := .Services}}
 {{.Desc}}
 type {{.Name}}Client struct {
+	//
 	*protocol.TenuredClientInvoke
-	serverName string
-	reg     registry.ServiceRegistry
-	{{range $name,$v := .DefinedLoadBalance}}
-	{{$name}}LB registry.LoadBalance{{end}}
-	
+	//负载均衡器
+	loadBalance load_balance.LoadBalance
+	//服务管理器
 	serviceManager *commons.ServiceManager
 }
 
@@ -441,24 +425,20 @@ func (this *{{.Name}}Client) Shutdown(interrupt bool) {
 
 {{range .Funcs}}
 	{{.Desc}}
-func (this *{{$s.Name}}Client) {{.Name}}({{if eq .LoadBalance "none" }} gl *registry.GlobalLoading,{{end}}{{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.UseShowType}}{{end}} ) ( {{range .Outs}}{{.UseShowType}}, {{end}}*protocol.TenuredError ) {
+func (this *{{$s.Name}}Client) {{.Name}}({{if eq .LoadBalance "none" }} gl *load_balance.GlobalLoading,{{end}}{{range $i,$in := .Ins}}{{if gt $i 0}},{{end}} {{.Name}} {{.UseShowType}}{{end}} ) ( {{range .Outs}}{{.UseShowType}}, {{end}}*protocol.TenuredError ) {
 	{{.ClientBody}}
 }
 {{end}}
 
-func New{{.Name}}Client(serverName string, reg registry.ServiceRegistry) (*{{.Name}}Client, error){
+func New{{.Name}}Client(loadBalance load_balance.LoadBalance) (*{{.Name}}Client, error){
 	client := &{{.Name}}Client{
 		TenuredClientInvoke: &protocol.TenuredClientInvoke{},
 	}
-	client.serverName = serverName
-	client.reg = reg
 	client.serviceManager = commons.NewServiceManager()
 	client.serviceManager.Add(client.TenuredClientInvoke)
 
-	{{range $name,$v := .DefinedLoadBalance}}
-	client.{{$name}}LB = {{$v}}(serverName,"{{$s.StoreTag}}",reg)
-	client.serviceManager.Add(client.{{$name}}LB)
-	{{end}}
+	client.loadBalance = loadBalance
+	client.serviceManager.Add(client.loadBalance)
 
 	return client, nil
 }
@@ -497,9 +477,9 @@ func New{{.Name}}Invoke(tenuredServer *protocol.TenuredServer, service {{$.TCD.A
 	return b.Bytes()
 }
 
-func NewServicesDef(importDef *Imports, lbs *LoadBalancesDef, typeDefs *TypesDef) *ServicesDef {
+func NewServicesDef(importDef *Imports, typeDefs *TypesDef) *ServicesDef {
 	return &ServicesDef{
-		Imports: importDef, LoadBalances: lbs, Types: typeDefs,
+		Imports: importDef, Types: typeDefs,
 		Services: make([]ServiceDef, 0),
 	}
 }

@@ -8,15 +8,18 @@ import (
 	"testing"
 )
 
-var dataDir = "/data/tenured"
-
-var accountService, _ = NewAccountServer(dataDir)
 var ID uint64 = 19416244780269568
 var sf = snowflake.NewSnowflake(snowflake.Settings{MachineID: 0})
 
-func init() {
-	if err := accountService.Start(); err != nil {
+func accountService() *AccountServer {
+	var dataDir = "/data/tenured"
+
+	if accountService, err := NewAccountServer(dataDir); err != nil {
 		panic(err)
+	} else if err := accountService.Start(); err != nil {
+		panic(err)
+	} else {
+		return accountService
 	}
 }
 
@@ -25,7 +28,7 @@ func TestAccountServer_Apply(t *testing.T) {
 	account.Id, _ = sf.NextID()
 	account.Name = fmt.Sprintf("名称：%d", account.Id)
 
-	err := accountService.Apply(account)
+	err := accountService().Apply(account)
 	assert.Nil(t, err)
 }
 
@@ -35,13 +38,13 @@ func BenchmarkAccountServer_Apply(t *testing.B) {
 		account.Id, _ = sf.NextID()
 		account.Name = fmt.Sprintf("名称: %d", i)
 
-		err := accountService.Apply(account)
+		err := accountService().Apply(account)
 		assert.Nil(t, err)
 	}
 }
 
 func TestAccountServer_Get(t *testing.T) {
-	ac, err := accountService.Get(ID)
+	ac, err := accountService().Get(ID)
 	assert.Nil(t, err)
 	t.Log(ac)
 }
@@ -52,7 +55,7 @@ func TestAccountServer_Check(t *testing.T) {
 		Status:            api.AccountStatusReturn,
 		StatusDescription: "您的照片信息有误，请重新上传！",
 	}
-	err := accountService.Check(check)
+	err := accountService().Check(check)
 	t.Log(err)
 }
 
@@ -62,7 +65,7 @@ func TestAccountServer_Search(t *testing.T) {
 	//search.Status = api.AccountStatusDisable
 	idx := 0
 	for {
-		rs, err := accountService.Search(nil, search)
+		rs, err := accountService().Search(nil, search)
 		assert.Nil(t, err)
 		if rs == nil {
 			break

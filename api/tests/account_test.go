@@ -1,41 +1,37 @@
-package client
+package tests
 
 import (
-	"errors"
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
 	"github.com/ihaiker/tenured-go-server/plugins"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var reg registry.ServiceRegistry
-var server *AccountServiceClient
-
-func Init() error {
-	if plugins, err := plugins.GetRegistryPlugins("consul://127.0.0.1:8500"); err != nil {
-		return errors.New("no registry")
+func GetAccountService() (server *client.AccountServiceClient, reg registry.ServiceRegistry, err error) {
+	var plugin registry.Plugins
+	if plugin, err = plugins.GetRegistryPlugins("consul://127.0.0.1:8500"); err != nil {
+		return
 	} else {
-		if reg, err = plugins.Registry(); err != nil {
-			return err
+		if reg, err = plugin.Registry(); err != nil {
+			return
 		}
 	}
-	server, _ = NewAccountServiceClient("tenured_store", reg)
-
-	return server.Start()
-}
-
-func Destory() {
-	commons.ShutdownIfService(reg, true)
-	server.Shutdown(true)
+	if server, err = client.NewAccountServiceClient(load_balance.NewRoundLoadBalance("tenured_store", "account", reg)); err != nil {
+		return
+	}
+	if err = server.Start(); err != nil {
+		return
+	}
+	return
 }
 
 func TestNewAccount_Apply(t *testing.T) {
-	err := Init()
+	server, _, err := GetAccountService()
 	assert.Nil(t, err)
-	defer Destory()
 
 	id, _ := snowflake.NewSnowflake(snowflake.Settings{}).NextID()
 
@@ -54,9 +50,8 @@ func TestNewAccount_Apply(t *testing.T) {
 }
 
 func TestAccountService_Get(t *testing.T) {
-	err := Init()
+	server, _, err := GetAccountService()
 	assert.Nil(t, err)
-	defer Destory()
 
 	ac, err := server.Get(29416244180269568)
 	assert.NotNil(t, err)
@@ -65,11 +60,10 @@ func TestAccountService_Get(t *testing.T) {
 }
 
 func TestAccountServiceClient_Search(t *testing.T) {
-	err := Init()
+	server, _, err := GetAccountService()
 	assert.Nil(t, err)
-	defer Destory()
 
-	gl := &registry.GlobalLoading{}
+	gl := &load_balance.GlobalLoading{}
 	search := new(api.Search)
 	search.Limit = 10
 	for gl.NextNode() {

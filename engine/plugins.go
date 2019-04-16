@@ -6,6 +6,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
 	"path/filepath"
 	"plugin"
@@ -22,6 +23,8 @@ type StorePlugins interface {
 	Account() (api.AccountService, error)
 	User() (api.UserService, error)
 	Search() (api.SearchService, error)
+
+	LoadBalance() load_balance.LoadBalance
 }
 
 func GetStorePlugins(storeServiceName string, storeConfig *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {

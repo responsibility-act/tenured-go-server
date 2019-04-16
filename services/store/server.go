@@ -87,15 +87,17 @@ func (this *storeServer) initServicesInvoke() (err error) {
 	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.registry, this.server, this.executorManager)
 	this.serviceManger.Add(this.serviceInvokeManager)
 
-	this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
-		logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
-		response := protocol.NewACK(request.ID())
-		id, _ := this.snowflakeId.NextID()
-		response.Body = commons.UInt64(id)
-		if err := channel.Write(response, time.Millisecond*3000); err != nil {
-			logger.Error("snowflake write error: ", err)
-		}
-	}, this.executorManager.Get("Snowflake"))
+	if this.config.HasStore("snowflake") {
+		this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
+			logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
+			response := protocol.NewACK(request.ID())
+			id, _ := this.snowflakeId.NextID()
+			response.Body = commons.UInt64(id)
+			if err := channel.Write(response, time.Millisecond*3000); err != nil {
+				logger.Error("snowflake write error: ", err)
+			}
+		}, this.executorManager.Get("Snowflake"))
+	}
 
 	return nil
 }

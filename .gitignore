@@ -22,5 +22,5 @@ get.txt
 /distribution
 
 /api/*_tcd.go
-/api/client/*_tcd.go
-/api/invoke/*_tcd.go
+/api/client
+/api/invoke

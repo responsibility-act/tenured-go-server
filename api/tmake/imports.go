@@ -20,10 +20,11 @@ func NewImport(tcd *TCDInfo) *Imports {
 		},
 		InterfacePackage: map[string]string{},
 		ClientPackage: map[string]string{
-			tcd.ApiPackageUrl:                 "",
-			TenuredHome + "/commons/registry": "",
-			TenuredHome + "/commons":          "",
 			"time":                            "",
+			tcd.ApiPackageUrl:                 "",
+			TenuredHome + "/commons":          "",
+			TenuredHome + "/commons/registry": "",
+			TenuredHome + "/commons/registry/load_balance": "",
 		},
 		InvokePackage: map[string]string{
 			tcd.ApiPackageUrl:                  "",

@@ -1,7 +1,8 @@
-package registry
+package load_balance
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/kataras/iris/core/errors"
 )
 
@@ -9,7 +10,7 @@ type GlobalLoading struct {
 	//当前
 	CurrentNode int
 	NodeSize    int
-	Server      *ServerInstance
+	Server      *registry.ServerInstance
 }
 
 //是否可以下一个节点
@@ -20,15 +21,15 @@ func (this *GlobalLoading) NextNode() bool {
 type noneLoadBalance struct {
 	serverName string
 	serverTag  string
-	reg        ServiceRegistry
+	reg        registry.ServiceRegistry
 }
 
-func (this *noneLoadBalance) Select(obj ...interface{}) ([]*ServerInstance, string, error) {
-	if len(obj) < 2 {
+func (this *noneLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*registry.ServerInstance, string, error) {
+	if len(obj) < 1 {
 		return nil, "", errors.New("global loding is must.")
 	}
 
-	if gl, match := obj[1].(*GlobalLoading); !match {
+	if gl, match := obj[0].(*GlobalLoading); !match {
 		return nil, "", errors.New("global loading is must.")
 	} else if ss, err := this.reg.Lookup(this.serverName, []string{this.serverTag}); err != nil {
 		return nil, "", err
@@ -39,15 +40,15 @@ func (this *noneLoadBalance) Select(obj ...interface{}) ([]*ServerInstance, stri
 		defer func() { gl.CurrentNode += 1 }()
 		gl.NodeSize = len(ss)
 		gl.Server = ss[gl.CurrentNode]
-		return []*ServerInstance{ss[gl.CurrentNode]}, "", err
+		return []*registry.ServerInstance{ss[gl.CurrentNode]}, "", err
 	}
 }
 
-func (this *noneLoadBalance) Return(key string) {
+func (this *noneLoadBalance) Return(requestCode uint16, key string) {
 
 }
 
-func NewNoneLoadBalance(serverName string, serverTag string, reg ServiceRegistry) LoadBalance {
+func NewNoneLoadBalance(serverName string, serverTag string, reg registry.ServiceRegistry) LoadBalance {
 	return &noneLoadBalance{
 		serverName: serverName, serverTag: serverTag, reg: reg,
 	}

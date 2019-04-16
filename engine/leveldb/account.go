@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -77,7 +77,7 @@ func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError)
 	}
 }
 
-func (this *AccountServer) Search(gl *registry.GlobalLoading, search *api.Search) (*api.SearchResult, *protocol.TenuredError) {
+func (this *AccountServer) Search(gl *load_balance.GlobalLoading, search *api.Search) (*api.SearchResult, *protocol.TenuredError) {
 	logger.Debug("搜索：", search)
 
 	if sn, err := this.data.GetSnapshot(); err != nil {
@@ -150,8 +150,28 @@ func (this *AccountServer) Check(checkAccount *api.CheckAccount) *protocol.Tenur
 	}
 }
 
+//添加APP
+func (this *AccountServer) ApplyApp(app *api.App) *protocol.TenuredError {
+	logger.Debug("申请App：", app)
+	return nil
+}
+
+//搜索账户APP
+func (this *AccountServer) SearchApp(searchApp *api.SearchApp) (*api.SearchAppResult, *protocol.TenuredError) {
+	return nil, nil
+}
+
+func (this *AccountServer) GetApp(accountId uint64, appId uint64) (*api.App, *protocol.TenuredError) {
+	return nil, nil
+}
+
+//审核APP
+func (this *AccountServer) CheckApp(checkAccountApp *api.CheckAccountApp) *protocol.TenuredError {
+	return nil
+}
+
 func (this *AccountServer) Start() (err error) {
-	logger.Debug("start accout store.")
+	logger.Debug("start account store.")
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		logger.Error("start account store error: ", err)
 		return

@@ -1,9 +1,10 @@
-package registry
+package load_balance
 
 import (
 	"fmt"
 	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/emirpasic/gods/utils"
+	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
 	"hash/crc64"
 	"strconv"
@@ -23,7 +24,7 @@ type TimedHashLoadBalance struct {
 	serverTag string
 
 	//注册中心管理器
-	registration ServiceRegistry
+	registration registry.ServiceRegistry
 
 	snowflakeExport SnowflakeExport
 
@@ -34,10 +35,10 @@ type TimedHashLoadBalance struct {
 	tree *treemap.Map
 
 	//保存注册服务
-	serverInstances map[string]*ServerInstance
+	serverInstances map[string]*registry.ServerInstance
 }
 
-func (this *TimedHashLoadBalance) addSerInstance(instance *ServerInstance) {
+func (this *TimedHashLoadBalance) addSerInstance(instance *registry.ServerInstance) {
 	id := instance.Id
 	firstStartTime, _ := strconv.ParseUint(instance.Metadata["FirstStartTime"], 10, 64)
 
@@ -61,9 +62,9 @@ func (this *TimedHashLoadBalance) Start() error {
 	return this.registration.Subscribe(this.serverName, this.onNotify)
 }
 
-func (this *TimedHashLoadBalance) onNotify(status RegistionStatus, serverInstances []*ServerInstance) {
+func (this *TimedHashLoadBalance) onNotify(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
 	for _, si := range serverInstances {
-		if status == REGISTER {
+		if status == registry.REGISTER {
 			if si.HasTag(this.serverTag) {
 				this.addSerInstance(si)
 			}
@@ -77,9 +78,9 @@ func (this *TimedHashLoadBalance) Shutdown(interrupt bool) {
 	_ = this.registration.Unsubscribe(this.serverName, this.onNotify)
 }
 
-func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]*ServerInstance, string, error) {
+func (this *TimedHashLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*registry.ServerInstance, string, error) {
 	//从请求参数参数中获取分区的snowflake生成的ID
-	snowflakeId := this.snowflakeExport(obj[0].(uint16), obj[1:]...)
+	snowflakeId := this.snowflakeExport(requestCode, obj...)
 	//分解此项ID值
 	petal := snowflake.Decompose(snowflakeId)
 
@@ -98,19 +99,19 @@ func (this *TimedHashLoadBalance) Select(obj ...interface{}) ([]*ServerInstance,
 	}
 
 	serverId := value.(*element).Id
-	return []*ServerInstance{this.serverInstances[serverId]}, "", nil
+	return []*registry.ServerInstance{this.serverInstances[serverId]}, "", nil
 }
 
-func (this *TimedHashLoadBalance) Return(key string) {}
+func (this *TimedHashLoadBalance) Return(requestCode uint16, key string) {}
 
-func NewTimedHashLoadBalance(serverName string, serverTag string, registration ServiceRegistry, virtualNum int, snowflakeExport SnowflakeExport) LoadBalance {
+func NewTimedHashLoadBalance(serverName string, serverTag string, registration registry.ServiceRegistry, virtualNum int, snowflakeExport SnowflakeExport) LoadBalance {
 	hlb := &TimedHashLoadBalance{
 		serverName: serverName, serverTag: serverTag, registration: registration,
 
 		snowflakeExport: snowflakeExport, table: crc64.MakeTable(crc64.ECMA),
 		virtualNum: virtualNum, tree: treemap.NewWith(utils.UInt64Comparator),
 
-		serverInstances: map[string]*ServerInstance{},
+		serverInstances: map[string]*registry.ServerInstance{},
 	}
 	return hlb
 }

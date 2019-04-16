@@ -1,0 +1,5 @@
+
+//获取分布式ID
+service ClusterIdService(1000) {
+	Get() ([]byte)
+}

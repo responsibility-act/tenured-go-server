@@ -33,6 +33,9 @@ install:
 upx:
 	upx -9 -k ${tenured}
 
+redis:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/redis-sync  redis.go
+
 .PHONY: clean
 clean:
 	@rm -rf bin
