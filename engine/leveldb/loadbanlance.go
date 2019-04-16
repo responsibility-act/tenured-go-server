@@ -27,6 +27,13 @@ func SearchLoadBalance(serverName, serverTag string, registration registry.Servi
 	return load_balance.NewHashLoadBalance(serverName, serverTag, registration, 100)
 }
 
-func NewLoadBalance() load_balance.LoadBalance {
-	return nil
+func NewLoadBalance(serverName string, registration registry.ServiceRegistry) load_balance.LoadBalance {
+	lbm := load_balance.NewLoadBalanceManager(nil)
+
+	hash := HashLoadBalance(serverName, "account", registration)
+	for requestCode := api.AccountServiceApply; requestCode < api.AccountServiceSearchApp; requestCode++ {
+		lbm.AddLoadBalance(requestCode, hash)
+	}
+
+	return lbm
 }

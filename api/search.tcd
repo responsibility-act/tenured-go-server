@@ -9,7 +9,7 @@ loadBalance {
 }
 
 //全局搜索服务
-service SearchService(1900) loadBalance(search){
+service SearchService(1900) {
 
     //保存搜索内容
     Put(key string,value []byte) ()

@@ -19,7 +19,7 @@ generate:
 	go generate api/generator.go
 
 plugin_registry_eureka:
-	go build ${debug} -buildmode=plugin -o plugins/registry/eureka.so ./commons/registry/eureka
+	go build ${debug} -buildmode=plugin -o plugins/registry/eureka.so ./plugins/registry/eureka
 
 plugins:
 	@echo "none plugins"
@@ -27,7 +27,7 @@ plugins:
 install:
 	@mkdir -p distribution
 	@cp -r bin distribution
-	@cp -r plugins distribution
+	@cp -r plugins/*/*.so distribution
 	@cp -r conf distribution
 
 upx:

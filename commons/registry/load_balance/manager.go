@@ -34,13 +34,10 @@ func (this *LoadBalanceManager) Return(requestCode uint16, regKey string) {
 	}
 }
 
-func NewLoadBalanceManager(def LoadBalance, serverName, serverTag string, reg registry.ServiceRegistry) *LoadBalanceManager {
+func NewLoadBalanceManager(def LoadBalance) *LoadBalanceManager {
 	lbm := &LoadBalanceManager{
 		store: map[uint16]LoadBalance{},
 	}
 	lbm.def = def
-	if def == nil {
-		lbm.def = NewRoundLoadBalance(serverName, serverTag, reg)
-	}
 	return lbm
 }

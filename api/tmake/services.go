@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var servicePattern = regexp.MustCompile(`^service (\w+)\(([0-9]{4,5})\)( loadBalance\((\w+)\))?[ ]?\{$`)
+var servicePattern = regexp.MustCompile(`^service (\w+)\(([0-9]{4,5})\)[ ]?\{$`)
 var funcPattern = regexp.MustCompile(`^(\w+)\(([ ,\[\]\w]*)\) \(([ ,\[\]\w]*)\)( error\(([,\w]+)\))?( loadBalance\((\w+)\))?( timeout\((\w+)\))?$`)
 
 type FunParam struct {

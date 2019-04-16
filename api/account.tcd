@@ -139,12 +139,8 @@ errors {
     AccountAppNotExists(2006,账户APP不存在)
 }
 
-loadBalance {
-    hash HashLoadBalance
-}
-
 //账户申请接口
-service AccountService(2000) loadBalance(hash) {
+service AccountService(2000) {
 
     //申请用户
     Apply(Account) () error(AccountExists,MobileExists)

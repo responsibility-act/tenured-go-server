@@ -40,11 +40,8 @@ type SearchUser {
     Name string empty
 }
 
-loadBalance {
-    hash HashLoadBalance
-}
 
-service UserService(3000) loadBalance(hash) {
+service UserService(3000) {
 
     AddOrUpdateUser(user User) ()
 

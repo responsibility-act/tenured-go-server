@@ -28,7 +28,7 @@ func (this *levelDBStorePlugins) Search() (api.SearchService, error) {
 }
 
 func (this *levelDBStorePlugins) LoadBalance() load_balance.LoadBalance {
-	return leveldb.NewLoadBalance()
+	return leveldb.NewLoadBalance(this.storeServiceName, this.reg)
 }
 
 func newLevelDBStore(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
