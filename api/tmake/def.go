@@ -90,7 +90,7 @@ func (def *Def) Invoke(tcd *TCDInfo) []byte {
 func NewDef(tcd *TCDInfo) *Def {
 	imports := NewImport(tcd)
 	enums := NewEunms()
-	typeDefs := NewTypes(enums)
+	typeDefs := NewTypes(enums, imports)
 	return &Def{
 		modules: []Module{
 			imports, NewErrors(),

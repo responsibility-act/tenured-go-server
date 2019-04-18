@@ -50,8 +50,9 @@ type TypeDef struct {
 }
 
 type TypesDef struct {
-	Enums *Enums
-	Types map[string]TypeDef
+	Enums   *Enums
+	Types   map[string]TypeDef
+	Imports *Imports
 }
 
 func (this *TypesDef) Add(addLines []string, info *TCDInfo) error {
@@ -59,6 +60,8 @@ func (this *TypesDef) Add(addLines []string, info *TCDInfo) error {
 	if !strings.HasPrefix(lines[0], "type") {
 		return NotMatch
 	}
+	this.Imports.AddInterface("fmt", "")
+
 	typeName := lines[0][5 : len(lines[0])-2]
 	typedef := TypeDef{
 		Name:   typeName,
@@ -95,15 +98,22 @@ type {{.Name}} struct {
 	{{.Name}} {{.ShowType}} !json:"{{.JsonName}}{{.OmitEmpty}}"!
 	{{end}}
 }
+
+func (this *{{.Name}}) String() string {
+	return fmt.Sprint("{{.Name}}{",
+	{{range .Fields}}"{{.JsonName}}=",this.{{.Name}},",",{{end}}
+	"}",)
+}
 {{end}}
 `))
 	_ = t.Execute(b, this)
 	return bytes.ReplaceAll(b.Bytes(), []byte{'!'}, []byte{'`'})
 }
 
-func NewTypes(enums *Enums) *TypesDef {
+func NewTypes(enums *Enums, imports *Imports) *TypesDef {
 	return &TypesDef{
-		Types: map[string]TypeDef{},
-		Enums: enums,
+		Types:   map[string]TypeDef{},
+		Enums:   enums,
+		Imports: imports,
 	}
 }

@@ -57,6 +57,10 @@ func ErrorRouter() *TenuredError {
 	return &TenuredError{code: "1005", message: "No valid route"}
 }
 
+func ErrorInvalidParameter() *TenuredError {
+	return &TenuredError{code: "1006", message: "Invalid parameter"}
+}
+
 func NewError(code, message string) *TenuredError {
 	return &TenuredError{code: code, message: message}
 }

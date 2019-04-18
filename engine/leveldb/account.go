@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/api"
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/protocol"
 	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -26,6 +27,13 @@ func accountKey(id uint64) []byte {
 }
 func statusKey(id uint64) []byte {
 	return []byte(fmt.Sprintf("S:%d", MAX_ID-id))
+}
+
+func appKey(accountId, appId uint64) []byte {
+	return []byte(fmt.Sprintf("P:%d,%d", accountId, appId))
+}
+func appStatusKey(accountId, appId uint64) []byte {
+	return []byte(fmt.Sprintf("T:%d,%d", MAX_ID-accountId, MAX_ID-appId))
 }
 
 type AccountServer struct {
@@ -153,21 +161,115 @@ func (this *AccountServer) Check(checkAccount *api.CheckAccount) *protocol.Tenur
 //添加APP
 func (this *AccountServer) ApplyApp(app *api.App) *protocol.TenuredError {
 	logger.Debug("申请App：", app)
+
+	if _, err := this.GetApp(app.AccountId, app.Id); err != nil && err != api.ErrAccountAppNotExists {
+		return api.ErrAccountAppExists
+	}
+
+	app.Status = api.AccountStatusApply
+
+	bs, _ := json.Marshal(app)
+	batch := &leveldb.Batch{}
+	batch.Put(appKey(app.AccountId, app.Id), bs)
+	batch.Put(appStatusKey(app.AccountId, app.Id), []byte(api.AccountStatusApply))
+
+	if err := this.data.Write(batch, writeOptions); err != nil {
+		return protocol.ErrorDB(err)
+	}
 	return nil
 }
 
 //搜索账户APP
 func (this *AccountServer) SearchApp(searchApp *api.SearchApp) (*api.SearchAppResult, *protocol.TenuredError) {
-	return nil, nil
+	logger.Debug("搜索：", searchApp)
+
+	if sn, err := this.data.GetSnapshot(); err != nil {
+		return nil, protocol.ConvertError(err)
+	} else {
+		sr := &api.SearchAppResult{SearchApps: make([]*api.App, 0)}
+
+		var startKey []byte
+		if searchApp.StartId == 0 {
+			startKey = appStatusKey(searchApp.AccountId, MAX_ID-MIN_ID)
+		} else {
+			startKey = appStatusKey(searchApp.AccountId, searchApp.StartId)
+		}
+
+		resultSize := 0
+		it := sn.NewIterator(&util.Range{Start: startKey}, readOptions)
+		defer it.Release()
+		for it.Next() && resultSize < searchApp.Limit {
+			key := string(it.Key())
+			if !strings.HasPrefix(key, "T:") {
+				break
+			}
+			if "" != string(searchApp.Status) &&
+				searchApp.Status != api.AccountStatus(string(it.Value())) {
+				continue
+			}
+			accountId, appId, _ := commons.SplitToUint2(key[2:], 10, 64)
+			if searchApp.StartId != 0 && searchApp.StartId == MAX_ID-appId {
+				continue
+			}
+			if app, err := this.GetApp(MAX_ID-accountId, MAX_ID-appId); err != nil {
+				return nil, err
+			} else {
+				resultSize++
+				sr.SearchApps = append(sr.SearchApps, app)
+			}
+		}
+		return sr, nil
+	}
 }
 
 func (this *AccountServer) GetApp(accountId uint64, appId uint64) (*api.App, *protocol.TenuredError) {
-	return nil, nil
+	key := appKey(accountId, appId)
+	if val, err := this.data.Get(key, readOptions); err != nil {
+		if err.Error() == levelDBNotFound {
+			return nil, api.ErrAccountAppNotExists
+		} else {
+			return nil, protocol.ErrorDB(err)
+		}
+	} else {
+		app := &api.App{}
+		if err := json.Unmarshal(val, app); err != nil {
+			return nil, protocol.ErrorDB(err)
+		}
+		return app, nil
+	}
 }
 
 //审核APP
 func (this *AccountServer) CheckApp(checkAccountApp *api.CheckAccountApp) *protocol.TenuredError {
-	return nil
+	if ac, err := this.GetApp(checkAccountApp.AccountId, checkAccountApp.AppId); err != nil {
+		return err
+	} else {
+		batch := &leveldb.Batch{}
+
+		statusKey := appStatusKey(ac.AccountId, ac.Id)
+
+		switch checkAccountApp.Status {
+		case api.AccountStatusOK:
+			{
+				batch.Delete(statusKey)
+			}
+		case api.AccountStatusReturn, api.AccountStatusDeny, api.AccountStatusDisable:
+			{
+				batch.Put(statusKey, []byte(checkAccountApp.Status))
+			}
+		}
+		ac.Status = checkAccountApp.Status
+		ac.StatusDescription = checkAccountApp.StatusDescription
+		ac.StatusTime = time.Now().Format("2006-01-02 15:04:05")
+
+		bs, _ := json.Marshal(ac)
+		batch.Put(appKey(ac.AccountId, ac.Id), bs)
+		if err := this.data.Write(batch, writeOptions); err != nil {
+			return protocol.ErrorDB(err)
+		}
+		return nil
+	}
+
 }
 
 func (this *AccountServer) Start() (err error) {

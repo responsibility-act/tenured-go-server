@@ -100,6 +100,7 @@ type App {
 }
 
 type SearchApp {
+    AccountId uint64
 
     //开始ID，如果第一页传入0
     StartId uint64 empty
@@ -112,15 +113,15 @@ type SearchApp {
 }
 
 type SearchAppResult {
-    SearchApps []SearchApp
+    SearchApps []App
 }
 
 type CheckAccountApp {
 
-    Account uint64
+    AccountId uint64
 
     //账户ID
-    Id uint64
+    AppId uint64
 
     //审核状态
     Status  AccountStatus
