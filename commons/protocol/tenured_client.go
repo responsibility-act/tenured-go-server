@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons/c8tmap"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"time"
 )
@@ -52,7 +53,7 @@ func NewTenuredClient(config *remoting.RemotingConfig) (*TenuredClient, error) {
 	client := &TenuredClient{
 		tenuredService: tenuredService{
 			remoting:         remotingClient,
-			responseTables:   map[uint32]*responseTableBlock{},
+			responseTables:   c8tmap.New(), //map[uint32]*responseTableBlock{},
 			commandProcesser: map[uint16]*tenuredCommandRunner{},
 		},
 	}

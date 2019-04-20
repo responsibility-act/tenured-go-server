@@ -3,6 +3,7 @@ package protocol
 import (
 	"errors"
 	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/commons/c8tmap"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/future"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
@@ -30,7 +31,7 @@ type TenuredService interface {
 
 type tenuredService struct {
 	remoting         remoting.Remoting
-	responseTables   map[uint32]*responseTableBlock
+	responseTables   c8tmap.ConcurrentMap //map[uint32]*responseTableBlock，tome: golang map不能并发写入。
 	commandProcesser map[uint16]*tenuredCommandRunner
 	*remoting.HandlerWrapper
 }
@@ -41,15 +42,19 @@ func (this *tenuredService) Invoke(channel string, command *TenuredCommand, time
 	}
 	requestId := command.id
 	responseFuture := future.Set()
-	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
+
+	//this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
+	this.responseTables.Set(requestId, &responseTableBlock{address: channel, future: responseFuture})
 
 	if err := this.remoting.SendTo(channel, command, timeout); err != nil {
 		logger.Debugf("send %d error: %v", requestId, err)
-		delete(this.responseTables, requestId)
+		//delete(this.responseTables, requestId)
+		this.responseTables.Remove(requestId)
 		return nil, err
 	} else {
 		response, err := responseFuture.GetWithTimeout(timeout)
-		delete(this.responseTables, requestId)
+		//delete(this.responseTables, requestId)
+		this.responseTables.Remove(requestId)
 		if err != nil {
 			return nil, err
 		}
@@ -70,13 +75,14 @@ func (this *tenuredService) AsyncInvoke(channel string, command *TenuredCommand,
 	}
 	requestId := command.id
 	responseFuture := future.Set()
-	this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
+	//this.responseTables[requestId] = &responseTableBlock{address: channel, future: responseFuture}
+	this.responseTables.Set(requestId, &responseTableBlock{address: channel, future: responseFuture})
 
 	this.remoting.SyncSendTo(channel, command, timeout, func(err error) {
 		if err != nil {
 			logger.Debugf("async send %d error", requestId)
 			callback(nil, err)
-			delete(this.responseTables, requestId)
+			this.responseTables.Remove(requestId)
 		} else {
 			logger.Debugf("async send %d error", requestId)
 		}
@@ -85,8 +91,8 @@ func (this *tenuredService) AsyncInvoke(channel string, command *TenuredCommand,
 	//TODO 设置异步执行可调用携程管理
 	go func() {
 		response, err := responseFuture.GetWithTimeout(timeout)
-		delete(this.responseTables, requestId)
-
+		//delete(this.responseTables, requestId)
+		this.responseTables.Remove(requestId)
 		if err != nil {
 			callback(nil, err)
 			return
@@ -136,8 +142,8 @@ func (this *tenuredService) OnMessage(channel remoting.RemotingChannel, msg inte
 	command := msg.(*TenuredCommand)
 	if command.IsACK() {
 		requestId := command.id
-		if f, has := this.responseTables[requestId]; has {
-			f.future.Set(command)
+		if f, has := this.responseTables.Pop(requestId); has {
+			f.(*responseTableBlock).future.Set(command)
 		}
 		return
 	} else {
@@ -160,9 +166,14 @@ func (this *tenuredService) OnClose(channel remoting.RemotingChannel) {
 }
 
 func (this *tenuredService) fastFailChannel(channel remoting.RemotingChannel) {
-	for _, v := range this.responseTables {
-		if v.address == channel.RemoteAddr() {
-			v.future.Exception(errors.New(remoting.ErrClosed.String()))
+	it := this.responseTables.IterBuffered()
+	for tu := <-it; tu.Key != nil; tu = <-it {
+		if val, has := this.responseTables.Get(tu.Key); has {
+			block := val.(*responseTableBlock)
+			if block.address == channel.RemoteAddr() {
+				block.future.Exception(errors.New(remoting.ErrClosed.String()))
+				this.responseTables.Remove(tu.Key)
+			}
 		}
 	}
 }
@@ -177,12 +188,15 @@ func (this *tenuredService) Start() error {
 
 func (this *tenuredService) waitRequest(interrupt bool) {
 	if interrupt {
-		for _, v := range this.responseTables {
-			v.future.Exception(errors.New(remoting.ErrClosed.String()))
+		it := this.responseTables.IterBuffered()
+		for tu := <-it; tu.Key != nil; tu = <-it {
+			if block, has := this.responseTables.Pop(tu.Key); has {
+				block.(*responseTableBlock).future.Exception(errors.New(remoting.ErrClosed.String()))
+			}
 		}
 	} else {
 		for {
-			if len(this.responseTables) == 0 {
+			if this.responseTables.Count() == 0 {
 				return
 			}
 			<-time.After(time.Millisecond * 10)

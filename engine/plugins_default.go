@@ -27,11 +27,7 @@ func (this *levelDBStorePlugins) Search() (api.SearchService, error) {
 	return leveldb.NewSearchServer(this.dataPath)
 }
 
-func (this *levelDBStorePlugins) LoadBalance() load_balance.LoadBalance {
-	return leveldb.NewLoadBalance(this.storeServiceName, this.reg)
-}
-
-func newLevelDBStore(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
+func newLevelDBStore(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugin, error) {
 	dataPath := commons.NewFile(config.Attributes["dataPath"])
 	if !dataPath.Exist() || !dataPath.IsDir() {
 		return nil, errors.New("the datapath not found !")
@@ -43,4 +39,19 @@ func newLevelDBStore(storeServiceName string, config *StoreEngineConfig, reg reg
 		reg:              reg,
 	}
 	return store, nil
+}
+
+type levelDBStoreClientPlugins struct {
+	storeServiceName string
+	reg              registry.ServiceRegistry
+}
+
+func (this *levelDBStoreClientPlugins) LoadBalance() load_balance.LoadBalance {
+	return leveldb.NewLoadBalance(this.storeServiceName, this.reg)
+}
+
+func newLevelDBStoreClient(storeServiceName string, reg registry.ServiceRegistry) (StoreClientPlugin, error) {
+	return &levelDBStoreClientPlugins{
+		storeServiceName: storeServiceName, reg: reg,
+	}, nil
 }

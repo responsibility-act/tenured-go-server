@@ -15,7 +15,7 @@ type IpAndPort struct {
 	Port int `json:"port" yaml:"port"`
 	//当端口被占用的时候是否可以自动寻找新的端口，开始位置是Port。
 	EnableAutoPort bool `json:"enableAutoPort" yaml:"enableAutoPort"`
-	autoPort       bool `json:"-"` //是否已经自动选择过了
+	portRegistied  bool `json:"-"` //是否已经自动选择过了
 
 	//忽略网络
 	IgnoredInterfaces []string `json:"ignoredInterfaces" yaml:"ignoredInterfaces"`
@@ -27,10 +27,11 @@ type IpAndPort struct {
 func (this *IpAndPort) getPort(host string) (int, error) {
 	var err error
 	if this.EnableAutoPort {
-		if this.autoPort {
+		if this.portRegistied {
 			return this.Port, nil
 		}
 		this.Port, err = RandPort(host, this.Port, 65535)
+		this.portRegistied = true
 	}
 	return this.Port, err
 }

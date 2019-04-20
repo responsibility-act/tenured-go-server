@@ -3,12 +3,12 @@ package console
 import (
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
-	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/services"
 )
 
 type ConsoleConfig struct {
-	HTTP string `json:"http"` //http监听地址
+	HTTP *nets.IpAndPort `json:"http"` //http监听地址
 
 	Prefix string `json:"prefix" yaml:"prefix"` //注册服务的前缀，所有系统保持一致
 
@@ -18,14 +18,15 @@ type ConsoleConfig struct {
 
 	Registry *services.Registry `json:"registry" yaml:"registry"` //注册中心
 
-	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
-
-	Executors services.Executors `json:"executors"`
+	StoreClient *engine.StoreEngineConfig `json:"storeClient" yaml:"storeClient"`
 }
 
 func NewConsoleConfig() *ConsoleConfig {
 	return &ConsoleConfig{
-		HTTP:   ":6074",
+		HTTP: &nets.IpAndPort{
+			Port:           6074,
+			EnableAutoPort: true,
+		},
 		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
 		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
 		Logs: &services.Logs{
@@ -36,15 +37,12 @@ func NewConsoleConfig() *ConsoleConfig {
 		Registry: &services.Registry{
 			Address: mixins.Get(mixins.KeyRegistry, mixins.Registry),
 			Attributes: map[string]string{
-				"CheckType": "http",
+				"checkType": "http",
+				"health":    "/health",
 			},
 		},
-		Tcp: &services.Tcp{
-			IpAndPort: &nets.IpAndPort{
-				Port: mixins.GetInt("tenured.console.port", 6073),
-			},
-			RemotingConfig: remoting.DefaultConfig(),
+		StoreClient: &engine.StoreEngineConfig{
+			Type: "leveldb",
 		},
-		Executors: services.Executors(map[string]string{}),
 	}
 }

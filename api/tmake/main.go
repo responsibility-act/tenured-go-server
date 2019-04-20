@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"io"
 	"log"
@@ -64,6 +65,8 @@ func main() {
 		apis[k] = absPath
 	}
 
+	stores := make([]string, 0)
+
 	for index, api := range apis {
 		log.Printf("%d: %s", index, api)
 		read, err := NewReader(api)
@@ -72,6 +75,7 @@ func main() {
 		}
 
 		tcd := NewTCD(api)
+		stores = append(stores, tcd.Name)
 
 		def := NewDef(tcd)
 		for {
@@ -142,6 +146,28 @@ func main() {
 					log.Panic(err)
 				}
 			}
+		}
+	}
+
+	//interface
+	{
+		f := commons.NewFile("stores_tcd.go")
+		if f.Exist() {
+			_ = os.Remove(f.GetPath())
+		}
+		if w, err := f.GetWriter(false); err != nil {
+			log.Panic(err)
+		} else {
+			defer w.Close()
+			_, _ = w.WriteString(fmt.Sprintf("package api\n"))
+			for _, v := range stores {
+				_, _ = w.WriteString(fmt.Sprintf("var Store%s = \"%s\" \n", UpperName(v), v))
+			}
+			_, _ = w.WriteString("var StoreAll = []string{")
+			for _, v := range stores {
+				_, _ = w.WriteString(fmt.Sprintf("Store%s,", UpperName(v)))
+			}
+			_, _ = w.WriteString("}")
 		}
 	}
 }

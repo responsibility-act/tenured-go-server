@@ -34,6 +34,31 @@ func (this *LoadBalanceManager) Return(requestCode uint16, regKey string) {
 	}
 }
 
+func (this *LoadBalanceManager) Start() error {
+	sets := map[LoadBalance]int{} //因为一个lb会多次注册，记录已经启动的，不然会多次调用启动
+	for _, v := range this.store {
+		if _, has := sets[v]; has {
+			continue
+		}
+		sets[v] = 1
+		if err := commons.StartIfService(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *LoadBalanceManager) Shutdown(interrupt bool) {
+	sets := map[LoadBalance]int{} //同Start处理逻辑一致
+	for _, v := range this.store {
+		if _, has := sets[v]; has {
+			continue
+		}
+		sets[v] = 1
+		commons.ShutdownIfService(v, interrupt)
+	}
+}
+
 func NewLoadBalanceManager(def LoadBalance) *LoadBalanceManager {
 	lbm := &LoadBalanceManager{
 		store: map[uint16]LoadBalance{},

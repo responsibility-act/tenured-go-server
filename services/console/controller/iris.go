@@ -2,50 +2,107 @@ package ctl
 
 import (
 	"context"
+	"github.com/ihaiker/tenured-go-server/api"
+	"github.com/ihaiker/tenured-go-server/api/client"
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
+	"github.com/ihaiker/tenured-go-server/commons/protocol"
+	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/kataras/iris"
 	ctx "github.com/kataras/iris/context"
-	"github.com/kataras/iris/middleware/logger"
-	"github.com/sirupsen/logrus"
+	"time"
 )
 
-var app *iris.Application = iris.Default()
-var log *logrus.Logger
+var app = iris.Default()
+var logger = logs.GetLogger("iris")
+
+var accountService api.AccountService
+var clusterIdService api.ClusterIdService
 
 type HttpServer struct {
-	http string
+	http           string
+	serviceManager *commons.ServiceManager
 }
 
-func (this *HttpServer) Start() error {
-	log.Info("http server start: ", this.http)
-	return app.Run(
-		iris.Addr(this.http),
-		iris.WithoutBanner,
-		iris.WithoutServerError(iris.ErrServerClosed),
-	)
+func (this *HttpServer) startService() (err error) {
+	for _, s := range []interface{}{accountService, clusterIdService} {
+		if err = commons.StartIfService(s); err != nil {
+			return
+		}
+	}
+	return nil
 }
 
-func (this *HttpServer) Shutdown(interrupt bool) {
-	if err := app.Shutdown(context.Background()); err != nil {
-		log.Error("shutdown console http server error:", err)
+func (this *HttpServer) shutdownService(interrupt bool) {
+	for _, s := range []interface{}{accountService, clusterIdService} {
+		commons.ShutdownIfService(s, interrupt)
 	}
 }
 
-func NewHttpServer(http string) *HttpServer {
-	return &HttpServer{http: http}
-}
+func (this *HttpServer) Start() (err error) {
+	logger.Debug("http server start: ", this.http)
 
-func init() {
-	log = logs.GetLogger("console")
+	if err = this.startService(); err != nil {
+		return
+	}
 
-	loggerConfig := logger.DefaultConfig()
-	loggerConfig.Query = true
-	requestLogger := logger.New(loggerConfig)
-	app.Use(requestLogger)
-
-	app.Logger().SetOutput(log.Out)
+	app.Logger().SetLevel(logger.Level.String())
+	app.Logger().SetOutput(logger.Out)
+	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
+	app.Logger().SetPrefix("iris ")
 
 	app.Get("/health", func(ctx ctx.Context) {
 		ctx.JSON(map[string]interface{}{"status": "UP"})
 	})
+
+	startErr := make(chan error, 0)
+	go func() {
+		defer close(startErr)
+		err = app.Run(
+			iris.Addr(this.http),
+			iris.WithoutBanner,
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+		startErr <- err
+	}()
+
+	select {
+	case err = <-startErr:
+		return
+	case <-time.After(time.Second):
+		return nil
+	}
+}
+
+func (this *HttpServer) Shutdown(interrupt bool) {
+	this.shutdownService(interrupt)
+
+	if err := app.Shutdown(context.Background()); err != nil {
+		logger.Error("shutdown console http server error:", err)
+	}
+}
+
+func NewHttpServer(http string, storeClientLoadBalance load_balance.LoadBalance) *HttpServer {
+	accountService = client.NewAccountServiceClient(storeClientLoadBalance)
+	clusterIdService = client.NewClusterIdServiceClient(storeClientLoadBalance)
+	return &HttpServer{http: http}
+}
+
+func writeJson(ctx iris.Context, out interface{}) {
+	if !commons.IsNil(out) {
+		switch out.(type) {
+		case error:
+			ctx.StatusCode(iris.StatusInternalServerError)
+			perr := protocol.ConvertError(out.(error))
+			_, _ = ctx.JSON(struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			}{Code: perr.Code(), Message: perr.Message()})
+		default:
+			ctx.StatusCode(iris.StatusOK)
+			_, _ = ctx.JSON(out)
+		}
+	} else {
+		ctx.StatusCode(iris.StatusNoContent)
+	}
 }

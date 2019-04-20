@@ -20,9 +20,8 @@ func GetAccountService() (server *client.AccountServiceClient, reg registry.Serv
 			return
 		}
 	}
-	if server, err = client.NewAccountServiceClient(load_balance.NewRoundLoadBalance("tenured_store", "account", reg)); err != nil {
-		return
-	}
+	server = client.NewAccountServiceClient(load_balance.NewRoundLoadBalance("tenured_store", api.StoreAccount, reg))
+
 	if err = server.Start(); err != nil {
 		return
 	}

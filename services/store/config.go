@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
@@ -39,7 +40,7 @@ func NewStoreConfig() *storeConfig {
 	return &storeConfig{
 		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
 		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
-		Stores: []string{"account", "user", "search"},
+		Stores: api.StoreAll,
 		Logs: &services.Logs{
 			Level:  "info",
 			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/store.log",

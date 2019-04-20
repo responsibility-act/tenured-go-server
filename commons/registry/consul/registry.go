@@ -52,7 +52,7 @@ func (this *ConsulServiceRegistry) Register(serverInstance *registry.ServerInsta
 		}
 		switch attrs.CheckType {
 		case "http":
-			check.HTTP = "http://" + serverInstance.Address + "/" + attrs.Health
+			check.HTTP = "http://" + serverInstance.Address + attrs.Health
 		case "tcp":
 			check.TCP = serverInstance.Address
 		}

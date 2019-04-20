@@ -411,16 +411,13 @@ type {{.Name}}Client struct {
 	*protocol.TenuredClientInvoke
 	//负载均衡器
 	loadBalance load_balance.LoadBalance
-	//服务管理器
-	serviceManager *commons.ServiceManager
 }
 
 func (this *{{.Name}}Client) Start() error {
-	return this.serviceManager.Start()
+	return this.TenuredClientInvoke.Start()
 }
-
 func (this *{{.Name}}Client) Shutdown(interrupt bool) {
-	this.serviceManager.Shutdown(interrupt)
+	this.TenuredClientInvoke.Shutdown(interrupt)
 }
 
 {{range .Funcs}}
@@ -430,17 +427,12 @@ func (this *{{$s.Name}}Client) {{.Name}}({{if eq .LoadBalance "none" }} gl *load
 }
 {{end}}
 
-func New{{.Name}}Client(loadBalance load_balance.LoadBalance) (*{{.Name}}Client, error){
+func New{{.Name}}Client(loadBalance load_balance.LoadBalance) (*{{.Name}}Client){
 	client := &{{.Name}}Client{
 		TenuredClientInvoke: &protocol.TenuredClientInvoke{},
 	}
-	client.serviceManager = commons.NewServiceManager()
-	client.serviceManager.Add(client.TenuredClientInvoke)
-
 	client.loadBalance = loadBalance
-	client.serviceManager.Add(client.loadBalance)
-
-	return client, nil
+	return client
 }
 
 {{end}}`))
@@ -452,7 +444,6 @@ func (this *ServicesDef) InvokeOuter(tcd *TCDInfo) []byte {
 	this.TCD = tcd
 	b := new(bytes.Buffer)
 	ftl(`
-
 {{range $i,$s  := .Services}}
 func New{{.Name}}Invoke(tenuredServer *protocol.TenuredServer, service {{$.TCD.ApiPackageName}}.{{.Name}}, manager executors.ExecutorManager) error {
 	var logger = logs.GetLogger("invoke")

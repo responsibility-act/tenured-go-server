@@ -33,15 +33,16 @@ type ServerInstance struct {
 	Status string
 }
 
-func (this ServerInstance) HasTag(tagName string) bool {
+func (this ServerInstance) HasTag(tagNames ...string) bool {
 	if this.Tags == nil || len(this.Tags) == 0 {
 		return false
 	}
 	for _, tag := range this.Tags {
-		if tagName == tag {
-			return true
+		for _, tagName := range tagNames {
+			if tagName == tag {
+				return true
+			}
 		}
-
 	}
 	return false
 }

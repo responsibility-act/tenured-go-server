@@ -4,7 +4,7 @@ import "github.com/ihaiker/tenured-go-server/commons/registry"
 
 type ConsulServerAttrs struct {
 	//检查类型
-	CheckType string `json:"type" yaml:"type" attr:"type"` //http,tcp
+	CheckType string `json:"checkType" yaml:"type" attr:"checkType"` //http,tcp
 
 	Health string `json:"health" yaml:"health" attr:"health"` //http url
 

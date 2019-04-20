@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/invoke"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
@@ -19,7 +20,7 @@ type ServicesInvokeManager struct {
 
 	executorManager executors.ExecutorManager
 
-	storePlugins engine.StorePlugins
+	storePlugins engine.StorePlugin
 
 	serverManager *commons.ServiceManager
 }
@@ -36,12 +37,12 @@ func NewServicesInvokeManager(config *storeConfig, reg registry.ServiceRegistry,
 
 func (this *ServicesInvokeManager) Start() (err error) {
 	storeServerName := this.config.Prefix + "_store"
-	this.storePlugins, err = engine.GetStorePlugins(storeServerName, this.config.Engine, this.reg)
+	this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine, this.reg)
 	if err != nil {
 		return err
 	}
 
-	if this.config.HasStore("account") {
+	if this.config.HasStore(api.StoreAccount) {
 		if service, err := this.storePlugins.Account(); err != nil {
 			return err
 		} else if err := invoke.NewAccountServiceInvoke(this.server, service, this.executorManager); err != nil {
@@ -51,7 +52,7 @@ func (this *ServicesInvokeManager) Start() (err error) {
 		}
 	}
 
-	if this.config.HasStore("search") {
+	if this.config.HasStore(api.StoreSearch) {
 		if service, err := this.storePlugins.Search(); err != nil {
 			return err
 		} else if err := invoke.NewSearchServiceInvoke(this.server, service, this.executorManager); err != nil {

@@ -55,13 +55,27 @@ func (this *CacheServiceRegistry) Unsubscribe(serverName string, listener regist
 
 func (this *CacheServiceRegistry) Lookup(serverName string, tags []string) ([]*registry.ServerInstance, error) {
 	if ss, has := this.serverCache[serverName]; has {
-		return ss, nil
+		return this.filterTags(ss, tags), nil
 	} else {
-		ss, err := this.reg.Lookup(serverName, tags)
+		ss, err := this.reg.Lookup(serverName, nil) //不能带入tag不然也会丢失注册信息的问题
 		if err == nil {
 			this.serverCache[serverName] = ss
 		}
-		return ss, err
+		return this.filterTags(ss, tags), err
+	}
+}
+
+func (this *CacheServiceRegistry) filterTags(serverInstances []*registry.ServerInstance, tags []string) []*registry.ServerInstance {
+	if tags == nil || len(tags) == 0 {
+		return serverInstances
+	} else {
+		instances := make([]*registry.ServerInstance, 0)
+		for _, serverInstance := range serverInstances {
+			if serverInstance.HasTag(tags...) {
+				instances = append(instances, serverInstance)
+			}
+		}
+		return instances
 	}
 }
 

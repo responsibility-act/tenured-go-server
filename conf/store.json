@@ -26,7 +26,8 @@
 		"idleTimeout": 3
 	},
 	"logs": {
-		"output": "file"
+		"level": "error",
+		"output": "stdout"
 	},
 	"executors": {
 		"Snowflake": "fix(10,10)"

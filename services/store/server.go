@@ -86,8 +86,7 @@ func (this *storeServer) initTenuredServer() (err error) {
 func (this *storeServer) initServicesInvoke() (err error) {
 	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.registry, this.server, this.executorManager)
 	this.serviceManger.Add(this.serviceInvokeManager)
-
-	if this.config.HasStore("snowflake") {
+	if this.config.HasStore(api.StoreClusterId) {
 		this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
 			logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
 			response := protocol.NewACK(request.ID())
@@ -98,7 +97,6 @@ func (this *storeServer) initServicesInvoke() (err error) {
 			}
 		}, this.executorManager.Get("Snowflake"))
 	}
-
 	return nil
 }
 

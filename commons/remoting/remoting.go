@@ -156,6 +156,7 @@ func (this *remotingImpl) IsStatus(status commons.ServerStatus) bool {
 func (this *remotingImpl) closeChannels() {
 	for _, v := range this.channels {
 		if v != nil {
+			delete(this.channels, v.RemoteAddr())
 			v.Close()
 		}
 	}

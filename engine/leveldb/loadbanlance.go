@@ -13,8 +13,8 @@ func accountSnowflakeExport(requestCode uint16, obj ...interface{}) uint64 {
 	case api.AccountServiceGet:
 		return obj[0].(uint64)
 		//case api.AccountServiceGetByMobile, api.AccountServiceGetByEmail:
-		//	mobileOrEmail := obj[0].(string)
-		//	return crc64.Checksum([]byte(mobileOrEmail), crc64.MakeTable(crc64.ECMA))
+		//mobileOrEmail := obj[0].(string)
+		//return crc64.Checksum([]byte(mobileOrEmail), crc64.MakeTable(crc64.ECMA))
 	}
 	return 0
 }
@@ -30,15 +30,16 @@ func SearchLoadBalance(serverName, serverTag string, registration registry.Servi
 func NewLoadBalance(serverName string, registration registry.ServiceRegistry) load_balance.LoadBalance {
 	lbm := load_balance.NewLoadBalanceManager(nil)
 
-	timedHashLoadBalance := HashLoadBalance(serverName, "account", registration)
+	timedHashLoadBalance := HashLoadBalance(serverName, api.StoreAccount, registration)
 	for requestCode := api.AccountServiceApply; requestCode < api.AccountServiceSearchApp; requestCode++ {
 		lbm.AddLoadBalance(requestCode, timedHashLoadBalance)
 	}
 
-	searchLoadBalance := SearchLoadBalance(serverName, "search", registration)
+	searchLoadBalance := SearchLoadBalance(serverName, api.StoreSearch, registration)
 	for requestCode := api.SearchServicePut; requestCode < api.SearchServiceRemove; requestCode++ {
 		lbm.AddLoadBalance(requestCode, searchLoadBalance)
 	}
 
+	lbm.AddLoadBalance(api.ClusterIdServiceGet, load_balance.NewRoundLoadBalance(serverName, api.StoreClusterId, registration))
 	return lbm
 }

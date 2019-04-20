@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons/c8tmap"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 )
 
@@ -32,8 +33,8 @@ func (this *TenuredServer) OnMessage(channel remoting.RemotingChannel, msg inter
 	command := msg.(*TenuredCommand)
 	if command.IsACK() {
 		requestId := command.id
-		if f, has := this.responseTables[requestId]; has {
-			f.future.Set(command)
+		if f, has := this.responseTables.Pop(requestId); has {
+			f.(*responseTableBlock).future.Set(command)
 		}
 		return
 	} else {
@@ -52,7 +53,7 @@ func NewTenuredServer(address string, config *remoting.RemotingConfig) (*Tenured
 		server := &TenuredServer{
 			tenuredService: tenuredService{
 				remoting:         remotingServer,
-				responseTables:   map[uint32]*responseTableBlock{},
+				responseTables:   c8tmap.New(), //map[uint32]*responseTableBlock{},
 				commandProcesser: map[uint16]*tenuredCommandRunner{},
 			},
 			AuthChecker: &ModuleAuthChecker{},

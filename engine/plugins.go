@@ -19,15 +19,17 @@ type StoreEngineConfig struct {
 
 var logger = logs.GetLogger("plugins")
 
-type StorePlugins interface {
+type StorePlugin interface {
 	Account() (api.AccountService, error)
 	User() (api.UserService, error)
 	Search() (api.SearchService, error)
+}
 
+type StoreClientPlugin interface {
 	LoadBalance() load_balance.LoadBalance
 }
 
-func GetStorePlugins(storeServiceName string, storeConfig *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
+func GetStorePlugin(storeServiceName string, storeConfig *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugin, error) {
 	if storeConfig.Type == "leveldb" {
 		return newLevelDBStore(storeServiceName, storeConfig, reg)
 	} else {
@@ -35,14 +37,36 @@ func GetStorePlugins(storeServiceName string, storeConfig *StoreEngineConfig, re
 	}
 }
 
-func loadStorePlugin(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugins, error) {
+func GetStoreClientPlugin(storeServiceName string, storeConfig *StoreEngineConfig, reg registry.ServiceRegistry) (StoreClientPlugin, error) {
+	if storeConfig.Type == "leveldb" {
+		return newLevelDBStoreClient(storeServiceName, reg)
+	} else {
+		return loadStoreClientPlugin(storeServiceName, storeConfig, reg)
+	}
+}
+
+func loadStorePlugin(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StorePlugin, error) {
 	pluginFile, _ := filepath.Abs(fmt.Sprintf("%s/../plugins/store/%s.%s", runtime.GetBinDir(), config.Type, runtime.GetLibraryExt()))
 	logger.Debug("load store plugins: ", config.Type, " ", pluginFile)
 	if p, err := plugin.Open(pluginFile); err != nil {
 		return nil, err
-	} else if fn, err := p.Lookup("NewStorePlugins"); err != nil {
+	} else if fn, err := p.Lookup("NewStorePlugin"); err != nil {
 		return nil, err
-	} else if newStorePlugins, match := fn.(func(string, *StoreEngineConfig, registry.ServiceRegistry) (StorePlugins, error)); match {
+	} else if newStorePlugins, match := fn.(func(string, *StoreEngineConfig, registry.ServiceRegistry) (StorePlugin, error)); match {
+		return newStorePlugins(storeServiceName, config, reg)
+	} else {
+		return nil, errors.New("can't found registry plugin in: " + pluginFile)
+	}
+}
+
+func loadStoreClientPlugin(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StoreClientPlugin, error) {
+	pluginFile, _ := filepath.Abs(fmt.Sprintf("%s/../plugins/store/%s_client.%s", runtime.GetBinDir(), config.Type, runtime.GetLibraryExt()))
+	logger.Debug("load storeclient plugins: ", config.Type, " ", pluginFile)
+	if p, err := plugin.Open(pluginFile); err != nil {
+		return nil, err
+	} else if fn, err := p.Lookup("NewStoreClientPlugin"); err != nil {
+		return nil, err
+	} else if newStorePlugins, match := fn.(func(string, *StoreEngineConfig, registry.ServiceRegistry) (StoreClientPlugin, error)); match {
 		return newStorePlugins(storeServiceName, config, reg)
 	} else {
 		return nil, errors.New("can't found registry plugin in: " + pluginFile)

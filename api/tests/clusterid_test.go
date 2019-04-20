@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
@@ -20,9 +21,9 @@ func GetClusterService() (server *client.ClusterIdServiceClient, err error) {
 			return
 		}
 	}
-	if server, err = client.NewClusterIdServiceClient(load_balance.NewRoundLoadBalance("tenured_store", "cluster", reg)); err != nil {
-		return
-	}
+
+	server = client.NewClusterIdServiceClient(load_balance.NewRoundLoadBalance("tenured_store", api.StoreClusterId, reg))
+
 	if err = server.Start(); err != nil {
 		return
 	}
@@ -43,5 +44,7 @@ func TestClusterId(t *testing.T) {
 	err = commons.StartIfService(server)
 	assert.Nil(t, err)
 
-	t.Log(server.Get())
+	id, err := server.Get()
+	assert.Nil(t, err)
+	t.Log(commons.ToUInt64(id))
 }

@@ -11,6 +11,10 @@ func (this *TenuredError) Code() string {
 	return this.code
 }
 
+func (this *TenuredError) Message() string {
+	return this.message
+}
+
 func (this *TenuredError) Is(code string) bool {
 	return this.code == code
 }

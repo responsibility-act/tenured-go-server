@@ -3,20 +3,19 @@ package console
 import "C"
 import (
 	"github.com/ihaiker/tenured-go-server/commons/logs"
+	"github.com/ihaiker/tenured-go-server/commons/runtime/signal"
 	"github.com/ihaiker/tenured-go-server/services"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 )
 
-var logger *logrus.Logger
+var logger = logs.GetLogger("console")
 var consoleServer *ConsoleServer
 var consoleConfig *ConsoleConfig
 
 var ConsoleCommand = &cobra.Command{
 	Use:     "console",
 	Short:   "Tenured Console",
-	Long:    `Complete documentation is available at http://tenured.renzhen.la/console`,
+	Long:    `Complete documentation is available at http://tenured.renzhen.la/console.html`,
 	Version: "1.0.0",
 	//Args:    cobra.MinimumNArgs(1),
 	Example: `	tenured console -f <path>`,
@@ -29,9 +28,6 @@ var ConsoleCommand = &cobra.Command{
 		if err := services.LoadServerConfig("console", config, consoleConfig); err != nil {
 			return err
 		}
-		if err = os.Chdir(consoleConfig.Data); err != nil {
-			return err
-		}
 
 		if err = logs.InitLogger(
 			consoleConfig.Logs.Loggers,
@@ -40,7 +36,7 @@ var ConsoleCommand = &cobra.Command{
 		); err != nil {
 			return err
 		}
-		logger = logs.GetLogger("store")
+
 		return err
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -48,7 +44,13 @@ var ConsoleCommand = &cobra.Command{
 		if err != nil {
 			return
 		}
-		return consoleServer.Start()
+		err = consoleServer.Start()
+		if err == nil {
+			signal.Signal(func() {})
+		} else {
+			logger.Error(err.Error())
+		}
+		return err
 	},
 	PostRun: func(cmd *cobra.Command, args []string) {
 		if consoleServer != nil {
