@@ -9,21 +9,31 @@ import (
 	"strconv"
 )
 
-type subscribeInfo struct {
+//服务注册监听者
+type subscriber struct {
 	listeners map[uintptr]registry.RegistryNotifyListener
 	services  map[string]*registry.ServerInstance
 	closeChan chan struct{}
 }
 
-func (this *subscribeInfo) close() {
+func (this *subscriber) notify(serverInstance []*registry.ServerInstance) {
+	for _, lis := range this.listeners {
+		for _, si := range serverInstance {
+			logger.Infof("notify registry name=%s, id=%s, status=%s", si.Name, si.Id, si.Status)
+		}
+		lis(serverInstance)
+	}
+}
+
+func (this *subscriber) close() {
 	close(this.closeChan)
 }
 
 type ConsulServiceRegistry struct {
 	client *api.Client
 	config *ConsulConfig
-
-	subscribes map[string]*subscribeInfo
+	//订阅信息
+	subscribes map[string]*subscriber
 }
 
 func (this *ConsulServiceRegistry) Start() error {
@@ -38,7 +48,7 @@ func (this *ConsulServiceRegistry) Shutdown(interrupt bool) {
 }
 
 func (this *ConsulServiceRegistry) Register(serverInstance *registry.ServerInstance) error {
-	logger.Infof("to register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
+	logger.Infof("register %s(%s) : %s", serverInstance.Name, serverInstance.Address, serverInstance.Id)
 	attrs := serverInstance.PluginAttrs.(*ConsulServerAttrs)
 	if host, portStr, err := net.SplitHostPort(serverInstance.Address); err != nil {
 		return err
@@ -70,14 +80,16 @@ func (this *ConsulServiceRegistry) Register(serverInstance *registry.ServerInsta
 }
 
 func (this *ConsulServiceRegistry) Unregister(serverId string) error {
-	logger.Info("To Unregister ", serverId)
+	logger.Info("unregister ", serverId)
 	return this.client.Agent().ServiceDeregister(serverId)
 }
 
 func (this *ConsulServiceRegistry) convertService(serverName string, service *api.ServiceEntry) *registry.ServerInstance {
 	status := service.Checks.AggregatedStatus()
 	if status == api.HealthPassing {
-		status = "OK"
+		status = registry.StatusOK
+	} else {
+		status = registry.StatusCritical
 	}
 	return &registry.ServerInstance{
 		Id:       service.Service.ID,
@@ -95,85 +107,74 @@ func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 			logger.Warnf("close subscribe(%s) error: %v", serverName, e)
 		}
 	}()
-	logger.Debug("start loop load subscribe server health:", serverName)
+	logger.Debug("start subscribe server health: ", serverName)
 
 	waitIndex := uint64(0)
 	healthWaitTime := this.config.HealthWaitTime()
-	failWaitTime := this.config.HealthFailWaitTime()
-	waitTime := healthWaitTime
-
-	register := make([]*registry.ServerInstance, 0)
-	deregister := make([]*registry.ServerInstance, 0)
 
 	for {
-		subInfo, has := this.subscribes[serverName]
+		subscribe, has := this.subscribes[serverName]
 		if !has {
 			return
 		}
-
 		select {
-		case <-subInfo.closeChan:
+		case <-subscribe.closeChan:
 			return
 		default:
-			services, metainfo, err := this.client.Health().Service(serverName, "", false,
+			serviceEntries, queryMeta, err := this.client.Health().Service(serverName, "", false,
 				&api.QueryOptions{
-					WaitIndex: waitIndex, //同步点，这个调用将一直阻塞，直到有新的更新,
-					WaitTime:  waitTime,  //此次请求等待时间，此处设置防止携程阻死
+					WaitIndex: waitIndex,      //同步点，这个调用将一直阻塞，直到有新的更新,
+					WaitTime:  healthWaitTime, //此次请求等待时间，此处设置防止携程阻死
 					//UseCache:  true, MaxAge:time.Second*5
+					AllowStale: true,
 				})
-			if err != nil || waitIndex == metainfo.LastIndex {
-				waitTime = healthWaitTime
+			if err != nil {
+				logger.Warn("load registry error:", err)
+				continue
+			}
+			if waitIndex == queryMeta.LastIndex {
 				continue
 			}
 
-			subInfo, has = this.subscribes[serverName]
+			subscribe, has = this.subscribes[serverName]
 			if !has {
 				return
 			}
+			logger.Debug("registry service changed : ", serverName)
 
-			register = register[:0]
-			deregister = deregister[:0]
-			if subInfo.services == nil {
-				subInfo.services = map[string]*registry.ServerInstance{}
-				for _, s := range services {
-					subInfo.services[s.Service.ID] = this.convertService(serverName, s)
-				}
-			} else {
-				currentServices := map[string]*registry.ServerInstance{}
+			notifies := make([]*registry.ServerInstance, 0)
 
-				for _, s := range services {
-					current := this.convertService(serverName, s)
-					if current.Status != api.HealthPassing {
-						waitTime = failWaitTime
-					}
-					if old, has := subInfo.services[s.Service.ID]; !has || current.Status != old.Status {
-						register = append(register, current)
-					}
-					currentServices[s.Service.ID] = current
-					delete(subInfo.services, s.Service.ID)
-				}
+			currentServices := map[string]*registry.ServerInstance{}
+			for _, serviceEntry := range serviceEntries {
+				serverInstance := this.convertService(serverName, serviceEntry)
+				currentServices[serverInstance.Id] = serverInstance
 
-				for _, s := range subInfo.services {
-					s.Status = "deregister"
-					deregister = append(deregister, s)
-				}
-
-				for _, v := range subInfo.listeners {
-					if len(register) > 0 {
-						v(registry.REGISTER, register)
+				if old, has := subscribe.services[serverInstance.Id]; has {
+					if old.Status != serverInstance.Status {
+						notifies = append(notifies, serverInstance)
 					}
-					if len(deregister) > 0 {
-						v(registry.UNREGISTER, deregister)
-					}
+				} else {
+					notifies = append(notifies, serverInstance)
 				}
-				subInfo.services = currentServices
 			}
-			waitIndex = metainfo.LastIndex
+
+			for _, serverInstance := range subscribe.services {
+				if _, has := currentServices[serverInstance.Id]; !has {
+					serverInstance.Status = registry.StatusDown
+					notifies = append(notifies, serverInstance)
+				}
+			}
+			if len(notifies) != 0 {
+				subscribe.notify(notifies)
+			}
+			subscribe.services = currentServices
+			waitIndex = queryMeta.LastIndex
 		}
 	}
 }
 
 func (this *ConsulServiceRegistry) Subscribe(serverName string, listener registry.RegistryNotifyListener) error {
+	logger.Info("Subscribe ", serverName)
 	if this.addSubscribe(serverName, listener) {
 		go this.loadSubscribeHealth(serverName)
 	}
@@ -181,6 +182,7 @@ func (this *ConsulServiceRegistry) Subscribe(serverName string, listener registr
 }
 
 func (this *ConsulServiceRegistry) Unsubscribe(serverName string, listener registry.RegistryNotifyListener) error {
+	logger.Info("Unsubscribe ", serverName, ",fn ", listener)
 	if this.removeSubscribe(serverName, listener) {
 		if sub, has := this.subscribes[serverName]; has {
 			sub.close()
@@ -203,11 +205,11 @@ func (this *ConsulServiceRegistry) Lookup(serverName string, tags []string) ([]*
 	}
 }
 
-func (this *ConsulServiceRegistry) getOrCreateSubscribe(name string) *subscribeInfo {
+func (this *ConsulServiceRegistry) getOrCreateSubscribe(name string) *subscriber {
 	if subInfo, has := this.subscribes[name]; !has {
-		subInfo = &subscribeInfo{
+		subInfo = &subscriber{
 			listeners: map[uintptr]registry.RegistryNotifyListener{},
-			services:  nil,
+			services:  map[string]*registry.ServerInstance{},
 			closeChan: make(chan struct{}),
 		}
 		this.subscribes[name] = subInfo
@@ -237,7 +239,7 @@ func newRegistry(pluginConfig *registry.PluginConfig) (*ConsulServiceRegistry, e
 	config := &ConsulConfig{config: pluginConfig}
 	serviceRegistry := &ConsulServiceRegistry{
 		config:     config,
-		subscribes: map[string]*subscribeInfo{},
+		subscribes: map[string]*subscriber{},
 	}
 
 	consulApiCfg := api.DefaultConfig()

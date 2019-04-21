@@ -12,7 +12,7 @@
 		"output": "stdout",
 		"archive": false,
 		"loggers": {
-			"iris":"error"
+			"iris": "error"
 		}
 	},
 	"registry": {

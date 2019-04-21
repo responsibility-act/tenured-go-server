@@ -16,7 +16,7 @@ func TestLogrus(t *testing.T) {
 }
 
 func TestFileLogrus(t *testing.T) {
-	err := InitLogger(map[string]string{}, "debug", "file", "./name.log", true, false)
+	err := InitLogger(map[string]string{}, "debug", "file", "./name.log", false)
 	assert.Nil(t, err)
 
 	logger := GetLogger("")

@@ -20,7 +20,12 @@ func (this *roundLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]
 		return ss, "", err
 	} else {
 		idx := int(currentRangeIndex % uint32(len(ss)))
-		return []*registry.ServerInstance{ss[idx]}, "", nil
+		if registry.IsOK(ss[idx]) {
+			return []*registry.ServerInstance{ss[idx]}, "", nil
+		} else {
+			//重新选择
+			return this.Select(requestCode, obj...)
+		}
 	}
 }
 

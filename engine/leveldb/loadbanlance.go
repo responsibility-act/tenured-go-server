@@ -12,34 +12,40 @@ func accountSnowflakeExport(requestCode uint16, obj ...interface{}) uint64 {
 		return obj[0].(*api.Account).Id
 	case api.AccountServiceGet:
 		return obj[0].(uint64)
-		//case api.AccountServiceGetByMobile, api.AccountServiceGetByEmail:
-		//mobileOrEmail := obj[0].(string)
-		//return crc64.Checksum([]byte(mobileOrEmail), crc64.MakeTable(crc64.ECMA))
 	}
 	return 0
 }
 
-func HashLoadBalance(serverName, serverTag string, registration registry.ServiceRegistry) load_balance.LoadBalance {
-	return load_balance.NewTimedHashLoadBalance(serverName, serverTag, registration, 100, accountSnowflakeExport)
+func AccountLoadBalance(serverName, serverTag string, reg registry.ServiceRegistry) load_balance.LoadBalance {
+	return load_balance.NewTimedHashLoadBalance(serverName, serverTag, reg, 100, accountSnowflakeExport)
 }
 
-func SearchLoadBalance(serverName, serverTag string, registration registry.ServiceRegistry) load_balance.LoadBalance {
-	return load_balance.NewHashLoadBalance(serverName, serverTag, registration, 100)
+func SearchLoadBalance(serverName, serverTag string, reg registry.ServiceRegistry) load_balance.LoadBalance {
+	return load_balance.NewHashLoadBalance(serverName, serverTag, reg, 100)
 }
 
-func NewLoadBalance(serverName string, registration registry.ServiceRegistry) load_balance.LoadBalance {
+func UserLoadBalance(serverName, serverTag string, reg registry.ServiceRegistry) load_balance.LoadBalance {
+	return load_balance.NewRoundLoadBalance(serverName, serverTag, reg)
+}
+
+func NewLoadBalance(serverName string, reg registry.ServiceRegistry) load_balance.LoadBalance {
 	lbm := load_balance.NewLoadBalanceManager(nil)
 
-	timedHashLoadBalance := HashLoadBalance(serverName, api.StoreAccount, registration)
-	for requestCode := api.AccountServiceApply; requestCode < api.AccountServiceSearchApp; requestCode++ {
+	timedHashLoadBalance := AccountLoadBalance(serverName, api.StoreAccount, reg)
+	for requestCode := api.AccountServiceRange.Min; requestCode < api.AccountServiceRange.Max; requestCode++ {
 		lbm.AddLoadBalance(requestCode, timedHashLoadBalance)
 	}
 
-	searchLoadBalance := SearchLoadBalance(serverName, api.StoreSearch, registration)
-	for requestCode := api.SearchServicePut; requestCode < api.SearchServiceRemove; requestCode++ {
+	searchLoadBalance := SearchLoadBalance(serverName, api.StoreSearch, reg)
+	for requestCode := api.SearchServiceRange.Min; requestCode < api.SearchServiceRange.Max; requestCode++ {
 		lbm.AddLoadBalance(requestCode, searchLoadBalance)
 	}
 
-	lbm.AddLoadBalance(api.ClusterIdServiceGet, load_balance.NewRoundLoadBalance(serverName, api.StoreClusterId, registration))
+	userLoadbalance := UserLoadBalance(serverName, api.StoreUser, reg)
+	for requestCode := api.UserServiceRange.Min; requestCode < api.UserServiceRange.Max; requestCode++ {
+		lbm.AddLoadBalance(requestCode, userLoadbalance)
+	}
+
+	lbm.AddLoadBalance(api.ClusterIdServiceGet, load_balance.NewRoundLoadBalance(serverName, api.StoreClusterId, reg))
 	return lbm
 }

@@ -62,14 +62,14 @@ func (this *TimedHashLoadBalance) Start() error {
 	return this.registration.Subscribe(this.serverName, this.onNotify)
 }
 
-func (this *TimedHashLoadBalance) onNotify(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
+func (this *TimedHashLoadBalance) onNotify(serverInstances []*registry.ServerInstance) {
 	for _, si := range serverInstances {
-		if status == registry.REGISTER {
-			if si.HasTag(this.serverTag) {
+		if si.HasTag(this.serverTag) {
+			if si.Status == registry.StatusOK {
 				this.addSerInstance(si)
+			} else if saveIs, has := this.serverInstances[si.Id]; has {
+				saveIs.Status = saveIs.String()
 			}
-		} else if saveIs, has := this.serverInstances[si.Id]; has {
-			saveIs.Status = status.String()
 		}
 	}
 }

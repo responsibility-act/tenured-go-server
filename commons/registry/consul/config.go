@@ -26,9 +26,5 @@ func (this *ConsulConfig) Token() string {
 }
 
 func (this *ConsulConfig) HealthWaitTime() time.Duration {
-	return time.Second * time.Duration(this.config.GetInt("healthWaitTime", 5))
-}
-
-func (this *ConsulConfig) HealthFailWaitTime() time.Duration {
-	return time.Second * time.Duration(this.config.GetInt("failHealthWaitTime", 1))
+	return time.Second * time.Duration(this.config.GetInt("healthWaitTime", 3))
 }

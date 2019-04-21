@@ -51,7 +51,7 @@ func NewAccountServer(dataPath string) (*AccountServer, error) {
 func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
 	logger.Debug("申请用户：", account)
 
-	if _, err := this.Get(account.Id); err != nil && err != api.ErrAccountNotExists {
+	if _, err := this.Get(account.Id); err != api.ErrAccountNotExists {
 		return api.ErrAccountExists
 	}
 
@@ -162,7 +162,7 @@ func (this *AccountServer) Check(checkAccount *api.CheckAccount) *protocol.Tenur
 func (this *AccountServer) ApplyApp(app *api.App) *protocol.TenuredError {
 	logger.Debug("申请App：", app)
 
-	if _, err := this.GetApp(app.AccountId, app.Id); err != nil && err != api.ErrAccountAppNotExists {
+	if _, err := this.GetApp(app.AccountId, app.Id); err != api.ErrAccountAppNotExists {
 		return api.ErrAccountAppExists
 	}
 

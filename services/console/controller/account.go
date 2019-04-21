@@ -1,6 +1,8 @@
 package ctl
 
 import (
+	"fmt"
+	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/kataras/iris/context"
 )
@@ -17,17 +19,28 @@ func init() {
 	accountServer := app.Party("/account")
 	{
 		accountServer.Post("/apply", applyAccount)
-		accountServer.Get("/id", func(ctx context.Context) {
-			id, err := clusterIdService.Get()
+	}
+
+	userServer := app.Party("/user")
+	{
+		userServer.Post("/add", func(ctx context.Context) {
+			user := &api.User{}
+			if err := ctx.ReadJSON(user); err != nil {
+				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
+				return
+			}
+			sid, err := clusterIdService.Get()
 			if err != nil {
-				logger.Warn("get id error: ", err)
-				writeJson(ctx, err)
+				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
+				return
+			}
+			user.ClusterId = commons.ToUInt64(sid)
+
+			err = userService.AddUser(user)
+			if commons.IsNil(err) {
+				_, _ = ctx.WriteString("OK")
 			} else {
-				idUint := commons.ToUInt64(id)
-				logger.Debug("get id := ", idUint)
-				writeJson(ctx, &struct {
-					Id uint64 `json:"id"`
-				}{Id: idUint})
+				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
 			}
 		})
 	}

@@ -303,6 +303,7 @@ type ServiceDef struct {
 	Name      string
 	Desc      string
 	StartCode uint16
+	EndCode   uint16
 	Funcs     []FuncDef
 }
 
@@ -323,7 +324,7 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 	serviceDef := ServiceDef{
 		StoreTag: info.Name,
 		Name:     gs[1], Desc: desc,
-		StartCode: uint16(startCode), Funcs: make([]FuncDef, 0),
+		StartCode: uint16(startCode), EndCode: uint16(startCode), Funcs: make([]FuncDef, 0),
 	}
 
 	lines = body(lines)
@@ -336,7 +337,6 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 		if err != nil {
 			return errors.New("error at : " + lines[0])
 		}
-		startRequestCode = startRequestCode + 1
 		funDef := FuncDef{
 			Name:        gs[1],
 			Desc:        desc,
@@ -346,6 +346,8 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 			tcd:         info,
 			Timeout:     "3s",
 		}
+		startRequestCode = startRequestCode + 1
+		serviceDef.EndCode = startRequestCode //maxRequestCode
 
 		funDef.LoadBalance = gs[7]
 		if gs[9] != "" {
@@ -385,9 +387,12 @@ func (this *ServicesDef) InterOuter(info *TCDInfo) []byte {
 	ftl(`
 //RequestCode
 var (
-{{range $i,$s := .Services}}{{range .Funcs}}
-		{{$s.Name}}{{.Name}} = uint16({{.RequestCode}})
-{{end}}{{end}}
+{{range $i,$s := .Services}}
+	//{{$s.Name}} RequestCode
+	{{range .Funcs}}{{$s.Name}}{{.Name}} = uint16({{.RequestCode}})
+	{{end}}
+		{{$s.Name}}Range = protocol.RequestCode{Min: {{.StartCode}}, Max: {{.EndCode}}}
+{{end}}
 )
 
 {{range .Services}}

@@ -18,14 +18,19 @@ var logger = logs.GetLogger("iris")
 
 var accountService api.AccountService
 var clusterIdService api.ClusterIdService
+var userService api.UserService
 
 type HttpServer struct {
 	http           string
 	serviceManager *commons.ServiceManager
 }
 
+func allService() []interface{} {
+	return []interface{}{accountService, clusterIdService, userService}
+}
+
 func (this *HttpServer) startService() (err error) {
-	for _, s := range []interface{}{accountService, clusterIdService} {
+	for _, s := range allService() {
 		if err = commons.StartIfService(s); err != nil {
 			return
 		}
@@ -33,19 +38,11 @@ func (this *HttpServer) startService() (err error) {
 	return nil
 }
 
-func (this *HttpServer) shutdownService(interrupt bool) {
-	for _, s := range []interface{}{accountService, clusterIdService} {
-		commons.ShutdownIfService(s, interrupt)
-	}
-}
-
 func (this *HttpServer) Start() (err error) {
 	logger.Debug("http server start: ", this.http)
-
 	if err = this.startService(); err != nil {
 		return
 	}
-
 	app.Logger().SetLevel(logger.Level.String())
 	app.Logger().SetOutput(logger.Out)
 	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
@@ -74,6 +71,12 @@ func (this *HttpServer) Start() (err error) {
 	}
 }
 
+func (this *HttpServer) shutdownService(interrupt bool) {
+	for _, s := range allService() {
+		commons.ShutdownIfService(s, interrupt)
+	}
+}
+
 func (this *HttpServer) Shutdown(interrupt bool) {
 	this.shutdownService(interrupt)
 
@@ -85,6 +88,8 @@ func (this *HttpServer) Shutdown(interrupt bool) {
 func NewHttpServer(http string, storeClientLoadBalance load_balance.LoadBalance) *HttpServer {
 	accountService = client.NewAccountServiceClient(storeClientLoadBalance)
 	clusterIdService = client.NewClusterIdServiceClient(storeClientLoadBalance)
+	userService = client.NewUserServiceClient(storeClientLoadBalance)
+
 	return &HttpServer{http: http}
 }
 

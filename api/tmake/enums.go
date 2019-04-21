@@ -83,9 +83,9 @@ func (this Enums) InterOuter(info *TCDInfo) []byte {
 			}
 			switch e.Type {
 			case "string":
-				b.WriteString(fmt.Sprintf("	%s%s = \"%s\" \n", e.Name, enumValue[0], enumValue[1]))
+				b.WriteString(fmt.Sprintf("	%s%s = %s(\"%s\") \n", e.Name, enumValue[0], e.Name, enumValue[1]))
 			default:
-				b.WriteString(fmt.Sprintf("	%s%s = %s(%s) \n", e.Name, enumValue[0], e.Type, enumValue[1]))
+				b.WriteString(fmt.Sprintf("	%s%s = %s(%s) \n", e.Name, enumValue[0], e.Name, enumValue[1]))
 			}
 		}
 		b.WriteString(")\n")

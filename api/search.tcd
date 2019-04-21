@@ -11,8 +11,11 @@ loadBalance {
 //全局搜索服务
 service SearchService(1900) {
 
-    //保存搜索内容
-    Put(key string,value []byte) ()
+    //设置搜索如果存在报错
+    Put(key string, value []byte) ()
+
+    //设置
+    Set(key string, value []byte) ()
 
     //获取搜索内容，返回内容就是搜索内容
     Get(key string) ([]byte)

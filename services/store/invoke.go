@@ -35,12 +35,25 @@ func NewServicesInvokeManager(config *storeConfig, reg registry.ServiceRegistry,
 	}
 }
 
+func (this *ServicesInvokeManager) aware(service interface{}) {
+	if regAware, math := service.(engine.RegistryAware); math {
+		regAware.SetRegistry(this.reg)
+	}
+	if serverAware, math := service.(engine.TenuredServerAware); math {
+		serverAware.SetTenuredServer(this.server)
+	}
+	if executorsAware, math := service.(engine.ExecutorManagerAware); math {
+		executorsAware.SetManager(this.executorManager)
+	}
+}
+
 func (this *ServicesInvokeManager) Start() (err error) {
 	storeServerName := this.config.Prefix + "_store"
-	this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine, this.reg)
+	this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine)
 	if err != nil {
 		return err
 	}
+	this.aware(this.storePlugins)
 
 	if this.config.HasStore(api.StoreAccount) {
 		if service, err := this.storePlugins.Account(); err != nil {
@@ -48,6 +61,7 @@ func (this *ServicesInvokeManager) Start() (err error) {
 		} else if err := invoke.NewAccountServiceInvoke(this.server, service, this.executorManager); err != nil {
 			return err
 		} else {
+			this.aware(service)
 			this.serverManager.Add(service)
 		}
 	}
@@ -58,6 +72,18 @@ func (this *ServicesInvokeManager) Start() (err error) {
 		} else if err := invoke.NewSearchServiceInvoke(this.server, service, this.executorManager); err != nil {
 			return err
 		} else {
+			this.aware(service)
+			this.serverManager.Add(service)
+		}
+	}
+
+	if this.config.HasStore(api.StoreUser) {
+		if service, err := this.storePlugins.User(); err != nil {
+			return err
+		} else if err := invoke.NewUserServiceInvoke(this.server, service, this.executorManager); err != nil {
+			return err
+		} else {
+			this.aware(service)
 			this.serverManager.Add(service)
 		}
 	}

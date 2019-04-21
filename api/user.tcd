@@ -4,19 +4,22 @@ enum UserType(int) {
     //正常用户
     Normal = 0
 
-    //客服用户
-    Kefu = 1
+    //客服，客服部门
+    CSD = 1
 }
 
 type User {
+    //账户信息
+    AccountId uint64
+
     //应用ID
-	AppID string
+	AppId uint64
 
 	//云用户ID
-	CloudID string
+	ClusterId uint64
 
-    //第三方系统ID，不允许修改、不允许超过32位
-	UserId string
+    //租户用户ID，不允许修改、不允许超过32位
+	TenantUserId string
 
 	//用户昵称，可以用于搜索
 	NickName string empty
@@ -29,23 +32,58 @@ type User {
 
 	//用户类型
 	Type UserType
-}
 
-type ClusterId {
-    Id string
+	//创建时间
+	CreateTime string
+
+	//登录token
+	Token string empty
+
+	//登录token使用超时时间
+	TokenExpireTime string empty
 }
 
 type SearchUser {
-    AppID string empty
-    Name string empty
+    AccountId uint64
+    AppID uint64
+    StartId uint64
+    Limit int
 }
 
+type TokenRequest {
+    //账户信息
+    AccountId uint64
+
+    //应用ID
+    AppId uint64
+
+    ClusterId uint64
+
+    //过期时间，不用过期不填写
+    ExpireTime string empty
+}
+
+errors {
+    UserExists(3001,用户已存在)
+    UserNotExists(3002,用户不存在)
+}
 
 service UserService(3000) {
 
-    AddOrUpdateUser(user User) ()
+    //添加用户或者更新用户信息
+    AddUser(user User) ()
 
-    Get(id string) (User)
+    //根据租户给定的用户ID获取用户
+    GetByTenantUserId(accountId uint64, appId uint64, tenantUserId string) (User)
+
+    //根据clusterId获取用户
+    GetByClusterId(accountId uint64, appId uint64, clusterId uint64) (User)
+
+    //更新用户信息，仅允许单个属性更新
+    ModifyUser(accountId uint64, appId uint64, clusterId uint64, modifyKey string, modifyValue []byte) ()
+
+    //获取登录token,string
+    GetToken(tokenReq TokenRequest) ([]byte)
 }
 
 

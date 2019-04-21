@@ -45,7 +45,7 @@ func (this *ConsulRegistryPlugins) Registry() (registry.ServiceRegistry, error) 
 var logger *logrus.Logger
 
 func init() {
-	logger = logs.GetLogger("consul-registry")
+	logger = logs.GetLogger("consul")
 }
 
 func NewRegistryPlugins(config *registry.PluginConfig) (registry.Plugins, error) {

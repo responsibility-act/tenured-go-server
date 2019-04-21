@@ -26,14 +26,15 @@ func (this *CacheServiceRegistry) Subscribe(serverName string, listener registry
 	if _, has := this.cache[pointer]; has {
 		return nil
 	}
-	newLis := registry.RegistryNotifyListener(func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
-		listener(status, serverInstances)
+	newLis := registry.RegistryNotifyListener(func(serverInstances []*registry.ServerInstance) {
+		listener(serverInstances)
 	L1:
 		for _, serverInstance := range serverInstances {
 			if cacheServerInstances, has := this.serverCache[serverInstance.Name]; has {
 				for _, cacheServerInstance := range cacheServerInstances {
 					if cacheServerInstance.Id == serverInstance.Id {
 						cacheServerInstance.Status = serverInstance.Status
+						cacheServerInstance.Metadata = serverInstance.Metadata
 						continue L1
 					}
 				}

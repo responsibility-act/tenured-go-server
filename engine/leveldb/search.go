@@ -28,6 +28,13 @@ func (this *SearchServer) Put(key string, value []byte) *protocol.TenuredError {
 	return nil
 }
 
+func (this *SearchServer) Set(key string, body []byte) *protocol.TenuredError {
+	if err := this.data.Put([]byte(key), body, writeOptions); err != nil {
+		return protocol.ErrorDB(err)
+	}
+	return nil
+}
+
 func (this *SearchServer) Get(key string) ([]byte, *protocol.TenuredError) {
 	if value, err := this.data.Get([]byte(key), readOptions); err != nil {
 		if err.Error() == levelDBNotFound {

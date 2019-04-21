@@ -4,22 +4,11 @@ package registry
 	注册中心注册器
 */
 
-type RegistionStatus int
+const StatusOK = "OK"             //注册
+const StatusCritical = "CRITICAL" //临时节点
+const StatusDown = "DOWN"         //下线节点
 
-func (this RegistionStatus) String() string {
-	switch this {
-	case REGISTER:
-		return "register"
-	case UNREGISTER:
-		return "unregister"
-	}
-	return "unknown"
-}
-
-const REGISTER = RegistionStatus(0)
-const UNREGISTER = RegistionStatus(1)
-
-type RegistryNotifyListener func(status RegistionStatus, serverInstances []*ServerInstance)
+type RegistryNotifyListener func(serverInstances []*ServerInstance)
 
 type ServiceRegistry interface {
 	//想注册中心注册服务

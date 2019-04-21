@@ -2,6 +2,7 @@ package consul
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -15,19 +16,16 @@ func init() {
 	config, _ = registry.ParseConfig("consul://127.0.0.1:8500")
 }
 
-func TestConsulServiceRegistry_Register(t *testing.T) {
+func TestConsulServiceRegistry(t *testing.T) {
+	logs.DebugLogger()
 
 	plugin, _ := NewRegistryPlugins(config)
 
 	sr, err := plugin.Registry()
 	assert.Nil(t, err)
 
-	err = sr.Subscribe("test", func(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
-		if status == registry.UNREGISTER {
-			logrus.Info("OnNotify deregister: ", serverInstances)
-		} else {
-			logrus.Info("OnNotify register  : ", serverInstances)
-		}
+	err = sr.Subscribe("test", func(serverInstances []*registry.ServerInstance) {
+		logrus.Info("OnNotify deregister: ", serverInstances)
 	})
 	t.Log(err)
 
@@ -54,4 +52,18 @@ func TestConsulServiceRegistry_Register(t *testing.T) {
 	(sr.(commons.Service)).Shutdown(true)
 
 	assert.Nil(t, err)
+}
+
+func TestConsulServiceRegistry_Register(t *testing.T) {
+	logs.DebugLogger()
+	plugin, _ := NewRegistryPlugins(config)
+	sr, err := plugin.Registry()
+	assert.Nil(t, err)
+	err = sr.Subscribe("tenured_store", func(serverInstances []*registry.ServerInstance) {
+		logrus.Info("OnNotify : ", serverInstances)
+	})
+	t.Log(err)
+
+	time.Sleep(time.Hour)
+	(sr.(commons.Service)).Shutdown(true)
 }

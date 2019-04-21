@@ -52,14 +52,14 @@ func (this *HashLoadBalance) Start() error {
 	return this.registration.Subscribe(this.serverName, this.onNotify)
 }
 
-func (this *HashLoadBalance) onNotify(status registry.RegistionStatus, serverInstances []*registry.ServerInstance) {
+func (this *HashLoadBalance) onNotify(serverInstances []*registry.ServerInstance) {
 	for _, si := range serverInstances {
-		if status == registry.REGISTER {
-			if si.HasTag(this.serverTag) {
+		if si.HasTag(this.serverTag) {
+			if si.Status == registry.StatusOK {
 				this.addSerInstance(si)
+			} else if saveIs, has := this.serverInstances[si.Id]; has {
+				saveIs.Status = si.Status
 			}
-		} else if saveIs, has := this.serverInstances[si.Id]; has {
-			saveIs.Status = status.String()
 		}
 	}
 }
@@ -89,7 +89,7 @@ func (this *HashLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*
 func (this *HashLoadBalance) Return(requestCode uint16, key string) {}
 
 func NewHashLoadBalance(serverName string, serverTag string, registration registry.ServiceRegistry, virtualNum int) LoadBalance {
-	hlb := &TimedHashLoadBalance{
+	hlb := &HashLoadBalance{
 		serverName: serverName, serverTag: serverTag, registration: registration,
 
 		table: crc64.MakeTable(crc64.ECMA), virtualNum: virtualNum, tree: treemap.NewWith(utils.UInt64Comparator),
