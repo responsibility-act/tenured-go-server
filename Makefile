@@ -5,7 +5,7 @@ param=-X main.VERSION=${version} -X 'main.BUILD_TIME=${build_date}' -X 'main.GO_
 tenured=bin/tenured
 
 ifeq ($(P),release)
-debug=-ldflags "-w -s"
+debug=-w -s
 else
 debug=
 endif
@@ -13,7 +13,7 @@ endif
 build: generate plugins main
 
 main:
-	go build ${debug} -ldflags "${param}" -o ${tenured} tenured.go
+	go build -ldflags "${debug} ${param}" -o ${tenured} tenured.go
 
 generate:
 	go generate api/generator.go
@@ -32,7 +32,6 @@ install:
 
 upx:
 	upx -9 -k ${tenured}
-
 
 .PHONY: clean
 clean:

@@ -2,15 +2,16 @@ package store
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry/cache"
+	"github.com/ihaiker/tenured-go-server/registry/plugins"
+
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
-	"github.com/ihaiker/tenured-go-server/plugins"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"strconv"
 	"time"
 )

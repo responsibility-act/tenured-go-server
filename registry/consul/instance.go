@@ -1,6 +1,8 @@
 package consul
 
-import "github.com/ihaiker/tenured-go-server/commons/registry"
+import (
+	"github.com/ihaiker/tenured-go-server/registry"
+)
 
 type ConsulServerAttrs struct {
 	//检查类型

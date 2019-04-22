@@ -4,9 +4,9 @@ import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
-	"github.com/ihaiker/tenured-go-server/plugins"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+	"github.com/ihaiker/tenured-go-server/registry/plugins"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -32,7 +32,7 @@ func GetClusterService() (server *client.ClusterIdServiceClient, err error) {
 
 func BenchmarkSnowflake(b *testing.B) {
 	sf, _ := GetClusterService()
-	_ = commons.StartIfService(sf)
+
 	for i := 0; i < b.N; i++ {
 		_, _ = sf.Get()
 	}
@@ -40,8 +40,6 @@ func BenchmarkSnowflake(b *testing.B) {
 
 func TestClusterId(t *testing.T) {
 	server, err := GetClusterService()
-
-	err = commons.StartIfService(server)
 	assert.Nil(t, err)
 
 	id, err := server.Get()

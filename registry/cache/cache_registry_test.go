@@ -1,21 +1,20 @@
 package cache
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/plugins"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 )
 
 func TestCacheServiceRegistry(t *testing.T) {
-	consulPlugin, err := plugins.GetRegistryPlugins("consul://127.0.0.1:8500")
+	consulPlugin, err := registry.GetRegistryPlugins("consul://127.0.0.1:8500")
 	assert.Nil(t, err)
 
 	reg, err := consulPlugin.Registry()
 	assert.Nil(t, err)
 
-	cache := NewCacheRegistry(reg)
+	cache := registry.NewCacheRegistry(reg)
 
 	w := sync.WaitGroup{}
 	w.Add(1)

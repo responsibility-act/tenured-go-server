@@ -1,6 +1,8 @@
 package load_balance
 
-import "github.com/ihaiker/tenured-go-server/commons/registry"
+import (
+	"github.com/ihaiker/tenured-go-server/registry"
+)
 
 type LoadBalance interface {
 	//注册服务的列表，

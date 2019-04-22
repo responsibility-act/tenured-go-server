@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"errors"
+
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/c8tmap"
 	"github.com/ihaiker/tenured-go-server/commons/executors"

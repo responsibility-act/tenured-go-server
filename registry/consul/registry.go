@@ -3,7 +3,8 @@ package consul
 import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
+
 	"net"
 	"reflect"
 	"strconv"

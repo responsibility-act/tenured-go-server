@@ -3,10 +3,10 @@ package tests
 import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/client"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
-	"github.com/ihaiker/tenured-go-server/plugins"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+	"github.com/ihaiker/tenured-go-server/registry/plugins"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

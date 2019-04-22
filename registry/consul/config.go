@@ -1,7 +1,7 @@
 package consul
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"time"
 )
 

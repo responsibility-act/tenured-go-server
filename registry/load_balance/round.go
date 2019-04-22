@@ -2,7 +2,7 @@ package load_balance
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons/atomic"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
 )
 
 type roundLoadBalance struct {

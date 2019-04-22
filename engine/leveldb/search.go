@@ -2,7 +2,7 @@ package leveldb
 
 import (
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"

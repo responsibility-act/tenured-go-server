@@ -2,7 +2,7 @@ package load_balance
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
 )
 
 type LoadBalanceManager struct {

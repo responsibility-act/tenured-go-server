@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	VERSION    string
-	BUILD_TIME string
-	GO_VERSION string
+	VERSION    string = "dev"
+	BUILD_TIME string = "2019-03-01 00:00:00"
+	GO_VERSION string = "go 1.12"
 )
 
 var rootCmd = &cobra.Command{

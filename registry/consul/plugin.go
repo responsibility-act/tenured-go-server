@@ -2,7 +2,7 @@ package consul
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons/logs"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/sirupsen/logrus"
 	"sync"
 )

@@ -3,9 +3,9 @@ package engine
 import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
+	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
 )
 
 type StoreEngineConfig struct {

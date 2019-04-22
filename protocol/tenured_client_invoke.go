@@ -1,8 +1,8 @@
 package protocol
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"time"
 )
 

@@ -3,13 +3,14 @@ package leveldb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	uuid "github.com/satori/go.uuid"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"

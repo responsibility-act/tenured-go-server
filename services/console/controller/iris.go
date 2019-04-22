@@ -2,12 +2,13 @@ package ctl
 
 import (
 	"context"
+	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/kataras/iris"
 	ctx "github.com/kataras/iris/context"
 	"time"

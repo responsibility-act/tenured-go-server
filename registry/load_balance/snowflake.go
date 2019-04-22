@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/emirpasic/gods/utils"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
+
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
 	"hash/crc64"
 	"strconv"

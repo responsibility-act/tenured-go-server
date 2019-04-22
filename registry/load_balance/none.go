@@ -2,7 +2,8 @@ package load_balance
 
 import (
 	"fmt"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
+
 	"github.com/kataras/iris/core/errors"
 )
 

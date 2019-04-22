@@ -355,7 +355,7 @@ func (this *ServicesDef) Add(addLines []string, info *TCDInfo) error {
 		}
 
 		if funDef.LoadBalance == "none" {
-			this.Imports.AddInterface(TenuredHome+"/commons/registry/load_balance", "")
+			this.Imports.AddInterface(TenuredHome+"/registry/load_balance", "")
 		}
 
 		if trim(gs[2]) != "" {

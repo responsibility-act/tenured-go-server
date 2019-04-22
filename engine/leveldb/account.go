@@ -3,10 +3,11 @@ package leveldb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/protocol"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"

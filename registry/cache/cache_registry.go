@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/ihaiker/tenured-go-server/commons/registry"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"reflect"
 )
 

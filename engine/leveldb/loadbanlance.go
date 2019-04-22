@@ -2,8 +2,8 @@ package leveldb
 
 import (
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
 )
 
 func accountSnowflakeExport(requestCode uint16, obj ...interface{}) uint64 {

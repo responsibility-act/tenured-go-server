@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/consul"
 	"github.com/ihaiker/tenured-go-server/commons/runtime"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/consul"
 	"path/filepath"
 	"plugin"
 )

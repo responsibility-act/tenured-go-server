@@ -3,11 +3,11 @@ package console
 import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
-	"github.com/ihaiker/tenured-go-server/commons/registry/cache"
-	"github.com/ihaiker/tenured-go-server/commons/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/engine"
-	"github.com/ihaiker/tenured-go-server/plugins"
+	"github.com/ihaiker/tenured-go-server/registry"
+	"github.com/ihaiker/tenured-go-server/registry/cache"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
+	"github.com/ihaiker/tenured-go-server/registry/plugins"
 	"github.com/ihaiker/tenured-go-server/services/console/controller"
 	"hash/crc64"
 )

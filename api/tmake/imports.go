@@ -16,15 +16,15 @@ type Imports struct {
 func NewImport(tcd *TCDInfo) *Imports {
 	return &Imports{
 		Imports: map[string]string{
-			TenuredHome + "/commons/protocol": "",
+			TenuredHome + "/protocol": "",
 		},
 		InterfacePackage: map[string]string{},
 		ClientPackage: map[string]string{
-			"time":                            "",
-			tcd.ApiPackageUrl:                 "",
-			TenuredHome + "/commons":          "",
-			TenuredHome + "/commons/registry": "",
-			TenuredHome + "/commons/registry/load_balance": "",
+			"time":                                 "",
+			tcd.ApiPackageUrl:                      "",
+			TenuredHome + "/commons":               "",
+			TenuredHome + "/registry":              "",
+			TenuredHome + "/registry/load_balance": "",
 		},
 		InvokePackage: map[string]string{
 			tcd.ApiPackageUrl:                  "",

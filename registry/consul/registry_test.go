@@ -3,7 +3,6 @@ package consul
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
-	"github.com/ihaiker/tenured-go-server/commons/registry"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -19,7 +18,7 @@ func init() {
 func TestConsulServiceRegistry(t *testing.T) {
 	logs.DebugLogger()
 
-	plugin, _ := NewRegistryPlugins(config)
+	plugin, _ := registry.NewRegistryPlugins(config)
 
 	sr, err := plugin.Registry()
 	assert.Nil(t, err)
@@ -56,7 +55,7 @@ func TestConsulServiceRegistry(t *testing.T) {
 
 func TestConsulServiceRegistry_Register(t *testing.T) {
 	logs.DebugLogger()
-	plugin, _ := NewRegistryPlugins(config)
+	plugin, _ := registry.NewRegistryPlugins(config)
 	sr, err := plugin.Registry()
 	assert.Nil(t, err)
 	err = sr.Subscribe("tenured_store", func(serverInstances []*registry.ServerInstance) {

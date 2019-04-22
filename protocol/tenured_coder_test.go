@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"bytes"
+
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/stretchr/testify/assert"
 	"testing"
