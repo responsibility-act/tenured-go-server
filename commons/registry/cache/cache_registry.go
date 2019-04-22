@@ -61,6 +61,7 @@ func (this *CacheServiceRegistry) Lookup(serverName string, tags []string) ([]*r
 		ss, err := this.reg.Lookup(serverName, nil) //不能带入tag不然也会丢失注册信息的问题
 		if err == nil {
 			this.serverCache[serverName] = ss
+			_ = this.Subscribe(serverName, func(serverInstances []*registry.ServerInstance) {})
 		}
 		return this.filterTags(ss, tags), err
 	}

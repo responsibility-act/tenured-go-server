@@ -16,11 +16,6 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		_, _ = entry.Buffer.WriteTo(b)
 	}
 
-	b.WriteString(entry.Time.Format("2006-01-02 15:04:05 "))
-	b.WriteString("[")
-	b.WriteString(entry.Level.String())
-	b.WriteString("] ")
-
 	agent, hasAgent := entry.Data["agent"]
 	if hasAgent {
 		b.WriteString("(")
@@ -28,6 +23,11 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		b.WriteString(") ")
 		delete(entry.Data, "agent")
 	}
+
+	b.WriteString("[")
+	b.WriteString(entry.Level.String())
+	b.WriteString("] ")
+	b.WriteString(entry.Time.Format("2006-01-02 15:04:05 "))
 
 	if (uint32(entry.Level) < uint32(logrus.InfoLevel) || !hasAgent) && entry.HasCaller() {
 		if entry.Caller.Function == "github.com/kataras/golog.integrateStdLogger.func1" {

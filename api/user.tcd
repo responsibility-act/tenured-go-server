@@ -1,4 +1,5 @@
 
+//用户类型
 enum UserType(int) {
 
     //正常用户
@@ -6,6 +7,13 @@ enum UserType(int) {
 
     //客服，客服部门
     CSD = 1
+}
+
+//性别
+enum Gender {
+    Male
+    Female
+    Unknown
 }
 
 type User {
@@ -24,23 +32,26 @@ type User {
 	//用户昵称，可以用于搜索
 	NickName string empty
 
+    //座右铭，个性签名
+	Motto string empty
+
 	//用户头像
 	Face string empty
+
+    //性别
+    Gender Gender empty
+
+    //用户类型
+    Type UserType
 
 	//用户属性
 	Attrs  map[string]string  empty
 
-	//用户类型
-	Type UserType
-
 	//创建时间
-	CreateTime string
+	CreateTime string empty
 
-	//登录token
-	Token string empty
-
-	//登录token使用超时时间
-	TokenExpireTime string empty
+	//更新时间
+	UpdateTime string empty
 }
 
 type SearchUser {
@@ -57,7 +68,22 @@ type TokenRequest {
     //应用ID
     AppId uint64
 
+    //集群ID
     ClusterId uint64
+
+    //用户使用的登录的IP地址
+    IPAddress string
+
+    //过期时间，不用过期不填写
+    ExpireTime string empty
+}
+
+type TokenResponse {
+    //用户token
+    Token string
+
+    //用户连接地址
+    Linker string
 
     //过期时间，不用过期不填写
     ExpireTime string empty
@@ -66,6 +92,7 @@ type TokenRequest {
 errors {
     UserExists(3001,用户已存在)
     UserNotExists(3002,用户不存在)
+    TokenNotExists(3003,Token不存在)
 }
 
 service UserService(3000) {
@@ -83,7 +110,10 @@ service UserService(3000) {
     ModifyUser(accountId uint64, appId uint64, clusterId uint64, modifyKey string, modifyValue []byte) ()
 
     //获取登录token,string
-    GetToken(tokenReq TokenRequest) ([]byte)
+    RequestLoginToken(tokenReq TokenRequest) (TokenResponse)
+
+    //获取用户token
+    GetToken(accountId uint64, appId uint64, clusterId uint64) (TokenResponse)
 }
 
 

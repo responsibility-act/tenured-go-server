@@ -43,5 +43,16 @@ func init() {
 				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
 			}
 		})
+		userServer.Get("/{appId}/{tenantId}", func(ctx context.Context) {
+			appId := ctx.Params().GetUint64Default("appId", 0)
+			tenantId := ctx.Params().Get("tenantId")
+
+			user, err := userService.GetByTenantUserId(1, appId, tenantId)
+			if commons.IsNil(err) {
+				_, _ = ctx.JSON(user)
+			} else {
+				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
+			}
+		})
 	}
 }

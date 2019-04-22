@@ -236,7 +236,7 @@ func (this *FuncDef) InvokeBody() string {
 				}
 			`, paramName))
 		} else {
-			b.WriteString(fmt.Sprintf("requestHeader := &struct{%s %s}{}", this.Ins[0].UpperName(), this.Ins[0].Type))
+			b.WriteString(fmt.Sprintf("requestHeader := &struct{%s %s `json:\"%s\"`}{}", this.Ins[0].UpperName(), this.Ins[0].Type, this.Ins[0].Name))
 			b.WriteString(`
 				if err := request.GetHeader(requestHeader); err != nil {
 					logger.Error("InvokeGetHeaderError",err)
@@ -252,8 +252,8 @@ func (this *FuncDef) InvokeBody() string {
 				hasBody = fmt.Sprintf(" %s := request.Body \n", v.Name)
 				st.Request += v.Name + ","
 			} else {
-				b.WriteString("\n" + v.Name + " " + v.Type)
-				st.Request += "requestHeader." + v.Name + ","
+				b.WriteString("\n" + v.UpperName() + " " + v.Type + " `json:\"" + v.Name + "\"`")
+				st.Request += "requestHeader." + v.UpperName() + ","
 			}
 		}
 		b.WriteString("}{}\n")

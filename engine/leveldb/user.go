@@ -21,10 +21,13 @@ import (
 )
 
 func tenantUserKey(accountId, appId uint64, userId string) []byte {
-	return []byte(fmt.Sprintf("T:%d:%d:%s", accountId, appId, userId))
+	return []byte(fmt.Sprintf("U:%d:%d:%s", accountId, appId, userId))
 }
 func clusterUserKey(accountId, appId uint64, clusterId uint64) []byte {
 	return []byte(fmt.Sprintf("C:%d:%d:%d", accountId, appId, clusterId))
+}
+func tokenKey(accountId, appId uint64, clusterId uint64) []byte {
+	return []byte(fmt.Sprintf("T:%d:%d:%d", accountId, appId, clusterId))
 }
 
 type UserServer struct {
@@ -102,19 +105,51 @@ func (this *UserServer) GetByClusterId(accountId uint64, appId uint64, clusterId
 
 //更新用户信息，仅允许单个属性更新
 func (this *UserServer) ModifyUser(accountId uint64, appId uint64, clusterId uint64, modifyKey string, modifyValue []byte) *protocol.TenuredError {
+	user, err := this.GetByClusterId(accountId, appId, clusterId)
+	if err != nil {
+		return err
+	}
+
+	switch modifyKey {
+	case "NickName":
+		user.NickName = string(modifyKey)
+	case "Face":
+		user.Face = string(modifyKey)
+	default:
+		user.Attrs[modifyKey] = string(modifyKey)
+	}
 	return nil
 }
 
-func (this *UserServer) GetToken(requestToken *api.TokenRequest) ([]byte, *protocol.TenuredError) {
-	uuidV4, _ := uuid.NewV4()
-	token := strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", ""))
-	user, err := this.GetByClusterId(requestToken.AccountId, requestToken.AppId, requestToken.ClusterId)
+func (this *UserServer) RequestLoginToken(requestToken *api.TokenRequest) (*api.TokenResponse, *protocol.TenuredError) {
+	_, err := this.GetByClusterId(requestToken.AccountId, requestToken.AppId, requestToken.ClusterId)
 	if err != nil {
 		return nil, err
 	}
-	user.Token = token
-	user.TokenExpireTime = requestToken.ExpireTime
-	return []byte(token), this.syncSetUser(user)
+	uuidV4, _ := uuid.NewV4()
+
+	token := &api.TokenResponse{
+		Token:  strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
+		Linker: "", ExpireTime: requestToken.ExpireTime,
+	}
+
+	key := tokenKey(requestToken.AccountId, requestToken.AppId, requestToken.ClusterId)
+	val, _ := json.Marshal(token)
+	if err := this.data.Put(key, val, writeOptions); err != nil {
+		return nil, protocol.ErrorDB(err)
+	}
+	return token, nil
+}
+
+func (this *UserServer) GetToken(accountId, appId, clusterId uint64) (*api.TokenResponse, *protocol.TenuredError) {
+	key := tokenKey(accountId, appId, clusterId)
+	if val, err := this.data.Get(key, readOptions); err != nil {
+		return nil, protocol.ErrorDB(err)
+	} else {
+		token := &api.TokenResponse{}
+		_ = json.Unmarshal(val, token)
+		return token, nil
+	}
 }
 
 func (this *UserServer) selectAddress(accountId, appId, clusterId uint64) (string, *protocol.TenuredError) {
@@ -133,13 +168,13 @@ func (this *UserServer) syncSetUser(user *api.User) *protocol.TenuredError {
 	}
 	value, _ := json.Marshal(user)
 	//就是本地服务
-	//if this.server.Address == address {
-	//	key := clusterUserKey(user.AccountId, user.AppId, user.ClusterId)
-	//	if err := this.data.Put(key, value, writeOptions); err != nil {
-	//		return protocol.ErrorDB(err)
-	//	}
-	//	return nil
-	//}
+	if this.server.Address == address {
+		key := clusterUserKey(user.AccountId, user.AppId, user.ClusterId)
+		if err := this.data.Put(key, value, writeOptions); err != nil {
+			return protocol.ErrorDB(err)
+		}
+		return nil
+	}
 
 	request := protocol.NewRequest(api.UserServiceRange.Max)
 	request.Body = value
@@ -157,7 +192,7 @@ func (this *UserServer) syncGetUser(accountId, appId, clusterId uint64) (*api.Us
 		return nil, protocol.ConvertError(err)
 	}
 	if this.server.Address == address {
-		//return this.GetByClusterId(accountId, appId, clusterId)
+		return this.GetByClusterId(accountId, appId, clusterId)
 	}
 
 	request := protocol.NewRequest(api.UserServiceGetByClusterId)

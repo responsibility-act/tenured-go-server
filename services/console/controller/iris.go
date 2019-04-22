@@ -46,7 +46,7 @@ func (this *HttpServer) Start() (err error) {
 	app.Logger().SetLevel(logger.Level.String())
 	app.Logger().SetOutput(logger.Out)
 	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
-	app.Logger().SetPrefix("iris ")
+	app.Logger().SetPrefix("(iris) ")
 
 	app.Get("/health", func(ctx ctx.Context) {
 		ctx.JSON(map[string]interface{}{"status": "UP"})
