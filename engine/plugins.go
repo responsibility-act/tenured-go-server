@@ -25,6 +25,8 @@ type StorePluginFunc func(storeServiceName string, config *StoreEngineConfig) (S
 type StoreClientPlugin interface {
 	LoadBalance() load_balance.LoadBalance
 }
+
+//TODO 添加serverTag方式
 type StoreClientPluginFunc func(storeServiceName string, config *StoreEngineConfig, reg registry.ServiceRegistry) (StoreClientPlugin, error)
 
 //注册组件Aware

@@ -221,7 +221,7 @@ func (this *ConsulServiceRegistry) getOrCreateSubscribe(name string) *subscriber
 //@return 返回是否是此服务的第一个监听器
 func (this *ConsulServiceRegistry) addSubscribe(name string, listener registry.RegistryNotifyListener) bool {
 	sets := this.getOrCreateSubscribe(name)
-	//fixme: hash of unhashable
+	//tome: hash of unhashable
 	pointer := reflect.ValueOf(listener).Pointer()
 	sets.listeners[pointer] = listener
 	return len(sets.listeners) == 1
@@ -230,7 +230,7 @@ func (this *ConsulServiceRegistry) addSubscribe(name string, listener registry.R
 //@return 是否是次服务的最后一个监听器
 func (this *ConsulServiceRegistry) removeSubscribe(name string, listener registry.RegistryNotifyListener) bool {
 	sets := this.getOrCreateSubscribe(name)
-	//fixme: hash of unhashable.
+	//tome: hash of unhashable.
 	pointer := reflect.ValueOf(listener).Pointer()
 	delete(sets.listeners, pointer)
 	return len(sets.listeners) == 0

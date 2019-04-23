@@ -36,24 +36,25 @@ func NewServicesInvokeManager(config *storeConfig, reg registry.ServiceRegistry,
 }
 
 func (this *ServicesInvokeManager) aware(service interface{}) {
-	if regAware, math := service.(engine.RegistryAware); math {
+	if regAware, match := service.(engine.RegistryAware); match {
 		regAware.SetRegistry(this.reg)
 	}
-	if serverAware, math := service.(engine.TenuredServerAware); math {
+	if serverAware, match := service.(engine.TenuredServerAware); match {
 		serverAware.SetTenuredServer(this.server)
 	}
-	if executorsAware, math := service.(engine.ExecutorManagerAware); math {
+	if executorsAware, match := service.(engine.ExecutorManagerAware); match {
 		executorsAware.SetManager(this.executorManager)
 	}
 }
 
 func (this *ServicesInvokeManager) Start() (err error) {
 	storeServerName := this.config.Prefix + "_store"
-	this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine)
-	if err != nil {
+
+	if this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine); err != nil {
 		return err
+	} else {
+		this.aware(this.storePlugins)
 	}
-	this.aware(this.storePlugins)
 
 	if this.config.HasStore(api.StoreAccount) {
 		if service, err := this.storePlugins.Account(); err != nil {

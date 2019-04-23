@@ -16,9 +16,9 @@ func (this *LoadBalanceManager) AddLoadBalance(requestCode uint16, lb LoadBalanc
 
 func (this *LoadBalanceManager) Select(requestCode uint16, obj ...interface{}) (serverInstances []*registry.ServerInstance, regKey string, err error) {
 	if lb, has := this.store[requestCode]; has {
-		serverInstances, regKey, err = lb.Select(requestCode, obj)
+		serverInstances, regKey, err = lb.Select(requestCode, obj...)
 	} else {
-		serverInstances, regKey, err = this.def.Select(requestCode, obj)
+		serverInstances, regKey, err = this.def.Select(requestCode, obj...)
 	}
 	if commons.IsNil(err) {
 		return

@@ -37,14 +37,13 @@ func TestNewAccount_Apply(t *testing.T) {
 	account := &api.Account{}
 	account.Id = id
 	account.Email = "wo@renzhen.la"
+	account.Mobile = "18812340000"
 
-	if err := server.Apply(account); err != nil {
-		t.Log(err)
-	}
+	err = server.Apply(account)
+	assert.Nil(t, err)
 
 	ac, err := server.Get(account.Id)
 	assert.Nil(t, err)
-
 	t.Log(ac)
 }
 
@@ -73,5 +72,23 @@ func TestAccountServiceClient_Search(t *testing.T) {
 			t.Log(a)
 		}
 	}
+}
 
+func TestAccountService_GetEmail(t *testing.T) {
+	server, _, err := GetAccountService()
+	assert.Nil(t, err)
+	ac, err := server.GetByEmail("wo@renzhen.la")
+	assert.Nil(t, err)
+	t.Log("err=", err)
+	t.Log("ac=", ac)
+}
+
+func TestAccountService_GetMobile(t *testing.T) {
+	server, _, err := GetAccountService()
+	assert.Nil(t, err)
+
+	ac, err := server.GetByMobile("18812340000")
+	assert.NotNil(t, err)
+	t.Log("err=", err)
+	t.Log("ac=", ac)
 }

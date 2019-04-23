@@ -171,9 +171,10 @@ func (this *storeServer) initRegistry() error {
 		return err
 	} else {
 		this.registry = cache.NewCacheRegistry(reg)
-		this.serviceManger.Add(reg)
+		this.serviceManger.Add(this.registry)
 	}
 	this.registryPlugins = registryPlugins
+	this.serviceManger.Add(this.registryPlugins)
 	return nil
 }
 

@@ -3,7 +3,9 @@ package leveldb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/load_balance"
 
 	"github.com/ihaiker/tenured-go-server/api"
@@ -37,14 +39,28 @@ func appStatusKey(accountId, appId uint64) []byte {
 	return []byte(fmt.Sprintf("T:%d,%d", MAX_ID-accountId, MAX_ID-appId))
 }
 
-type AccountServer struct {
-	dataPath string
-	data     *leveldb.DB
+func mobileKey(mobile string) string {
+	return fmt.Sprintf("Mobile:%s", mobile)
+}
+func emailKey(email string) string {
+	return fmt.Sprintf("Email:%s", email)
 }
 
-func NewAccountServer(dataPath string) (*AccountServer, error) {
+type AccountServer struct {
+	storeName string
+	dataPath  string
+	data      *leveldb.DB
+
+	reg            registry.ServiceRegistry
+	loadBalance    load_balance.LoadBalance
+	search         api.SearchService
+	accountService api.AccountService
+}
+
+func NewAccountServer(storeName, dataPath string) (*AccountServer, error) {
 	accountServer := &AccountServer{
-		dataPath: dataPath + "/store/account",
+		storeName: storeName,
+		dataPath:  dataPath + "/store/account",
 	}
 	return accountServer, nil
 }
@@ -56,9 +72,28 @@ func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
 		return api.ErrAccountExists
 	}
 
+	idbyte := []byte(fmt.Sprintf("%d", account.Id))
+	if account.Email != "" {
+		if err := this.search.Put(emailKey(account.Email), idbyte); commons.NotNil(err) {
+			if err.Code() == api.ErrSearchExists.Code() {
+				return api.ErrEmailRegistered
+			} else {
+				return err
+			}
+		}
+	}
+	if account.Mobile != "" {
+		if err := this.search.Put(mobileKey(account.Mobile), idbyte); commons.NotNil(err) {
+			if err.Code() == api.ErrSearchExists.Code() {
+				return api.ErrMobileRegistered
+			} else {
+				return err
+			}
+		}
+	}
+
 	account.Status = api.AccountStatusApply
 	bs, _ := json.Marshal(account)
-
 	//保存用户信息
 	batch := &leveldb.Batch{}
 	batch.Put(accountKey(account.Id), bs)
@@ -72,18 +107,45 @@ func (this *AccountServer) Apply(account *api.Account) *protocol.TenuredError {
 func (this *AccountServer) Get(id uint64) (*api.Account, *protocol.TenuredError) {
 	logger.Debug("获取用户: ", id)
 	if val, err := this.data.Get(accountKey(id), readOptions); err != nil {
-		if err.Error() == levelDBNotFound {
-			return nil, api.ErrAccountNotExists
-		} else {
-			return nil, protocol.ErrorDB(err)
-		}
+		return nil, notFound(err, api.ErrAccountNotExists)
 	} else {
 		account := &api.Account{}
-		if err := json.Unmarshal(val, account); err != nil {
-			return nil, protocol.ErrorDB(err)
-		}
+		_ = json.Unmarshal(val, account)
 		return account, nil
 	}
+}
+
+//根据手机号获取用户信息
+func (this *AccountServer) GetByMobile(mobile string) (*api.Account, *protocol.TenuredError) {
+	logger.Debug("获取账户 mobile: ", mobile)
+	key := mobileKey(mobile)
+	accountId := uint64(0)
+	if val, err := this.search.Get(string(key)); err != nil {
+		if err.Code() == api.ErrSearchNotExists.Code() {
+			return nil, api.ErrAccountNotExists
+		}
+		return nil, err
+	} else {
+		accountId, _ = strconv.ParseUint(string(val), 10, 64)
+	}
+
+	return this.accountService.Get(accountId)
+}
+
+//根据邮箱获取用户信息
+func (this *AccountServer) GetByEmail(email string) (*api.Account, *protocol.TenuredError) {
+	logger.Debug("获取账户 Email: ", email)
+	key := emailKey(email)
+	accountId := uint64(0)
+	if val, err := this.search.Get(string(key)); err != nil {
+		if err.Code() == api.ErrSearchNotExists.Code() {
+			return nil, api.ErrAccountNotExists
+		}
+		return nil, err
+	} else {
+		accountId, _ = strconv.ParseUint(string(val), 10, 64)
+	}
+	return this.accountService.Get(accountId)
 }
 
 func (this *AccountServer) Search(gl *load_balance.GlobalLoading, search *api.Search) (*api.SearchResult, *protocol.TenuredError) {
@@ -270,10 +332,18 @@ func (this *AccountServer) CheckApp(checkAccountApp *api.CheckAccountApp) *proto
 		}
 		return nil
 	}
+}
 
+func (this *AccountServer) SetRegistry(serviceRegistry registry.ServiceRegistry) {
+	this.reg = serviceRegistry
 }
 
 func (this *AccountServer) Start() (err error) {
+	this.loadBalance = NewLoadBalance(this.storeName, this.reg)
+
+	this.search = client.NewSearchServiceClient(this.loadBalance)
+	this.accountService = client.NewAccountServiceClient(this.loadBalance)
+
 	logger.Debug("start account store.")
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		logger.Error("start account store error: ", err)
@@ -283,11 +353,20 @@ func (this *AccountServer) Start() (err error) {
 		logger.Error("start account store error: ", err)
 		return err
 	}
-	return nil
+	if err = commons.StartIfService(this.search); err != nil {
+		return
+	}
+	if err = commons.StartIfService(this.accountService); err != nil {
+		return
+	}
+	return commons.StartIfService(this.loadBalance)
 }
 
 func (this *AccountServer) Shutdown(interrupt bool) {
 	if err := this.data.Close(); err != nil {
 		logger.Error("close account error: ", err)
 	}
+	commons.ShutdownIfService(this.search, interrupt)
+	commons.ShutdownIfService(this.accountService, interrupt)
+	commons.ShutdownIfService(this.loadBalance, interrupt)
 }

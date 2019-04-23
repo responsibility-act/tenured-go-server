@@ -49,3 +49,7 @@ func IsNil(i interface{}) bool {
 		return reflect.ValueOf(i).IsNil()
 	}
 }
+
+func NotNil(i interface{}) bool {
+	return !IsNil(i)
+}

@@ -34,7 +34,7 @@ func init() {
 				_, _ = ctx.WriteString(fmt.Sprintf("%v", err))
 				return
 			}
-			user.ClusterId = commons.ToUInt64(sid)
+			user.CloudId = commons.ToUInt64(sid)
 
 			err = userService.AddUser(user)
 			if commons.IsNil(err) {

@@ -3,14 +3,12 @@ package leveldb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/api"
+	"github.com/ihaiker/tenured-go-server/api/client"
+	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/load_balance"
-
-	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/ihaiker/tenured-go-server/commons/executors"
-	"github.com/ihaiker/tenured-go-server/commons/remoting"
-	"github.com/ihaiker/tenured-go-server/protocol"
 	uuid "github.com/satori/go.uuid"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
@@ -18,99 +16,94 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
-func tenantUserKey(accountId, appId uint64, userId string) []byte {
-	return []byte(fmt.Sprintf("U:%d:%d:%s", accountId, appId, userId))
+func tenantUserKey(accountId, appId uint64, userId string) string {
+	return fmt.Sprintf("U:%d:%d:%s", accountId, appId, userId)
 }
-func clusterUserKey(accountId, appId uint64, clusterId uint64) []byte {
-	return []byte(fmt.Sprintf("C:%d:%d:%d", accountId, appId, clusterId))
+func cloudKey(accountId, appId uint64, cloudId uint64) []byte {
+	return []byte(fmt.Sprintf("C:%d:%d:%d", accountId, appId, cloudId))
 }
-func tokenKey(accountId, appId uint64, clusterId uint64) []byte {
-	return []byte(fmt.Sprintf("T:%d:%d:%d", accountId, appId, clusterId))
+func tokenKey(accountId, appId uint64, cloudId uint64) []byte {
+	return []byte(fmt.Sprintf("T:%d:%d:%d", accountId, appId, cloudId))
 }
 
 type UserServer struct {
-	dataPath string
-	data     *leveldb.DB
+	storeName string
+	dataPath  string
+	data      *leveldb.DB
 
-	server      *protocol.TenuredServer
-	client      *protocol.TenuredClient
-	manager     executors.ExecutorManager
+	reg         registry.ServiceRegistry
 	loadBalance load_balance.LoadBalance
+	search      api.SearchService
+	cluster     api.UserService
 }
 
-func NewUserServer(dataPath string, serverName string, reg registry.ServiceRegistry, server *protocol.TenuredServer, manager executors.ExecutorManager) (*UserServer, error) {
+func NewUserServer(serverName, dataPath string) (*UserServer, error) {
 	userServer := &UserServer{
-		dataPath: dataPath + "/store/user",
-		server:   server,
-		manager:  manager,
-	}
-	userServer.loadBalance = UserLoadBalance(serverName, api.StoreUser, reg)
-
-	config := remoting.DefaultConfig()
-	config.SendLimit = 100
-	if client, err := protocol.NewTenuredClient(config); err != nil {
-		return nil, err
-	} else {
-		userServer.client = client
+		storeName: serverName,
+		dataPath:  dataPath + "/store/user",
 	}
 	return userServer, nil
 }
 
 func (this *UserServer) AddUser(user *api.User) *protocol.TenuredError {
-	if _, err := this.GetByTenantUserId(user.AccountId, user.AppId, user.TenantUserId); err != api.ErrUserNotExists {
+	//判断用户是否已经添加
+	_, err := this.cluster.GetByTenantUserId(user.AccountId, user.AppId, user.TenantUserId)
+	if err == nil || err.Code() != api.ErrUserNotExists.Code() {
 		return api.ErrUserExists
 	}
-	key := tenantUserKey(user.AccountId, user.AppId, user.TenantUserId)
-	value := fmt.Sprintf("%d", user.ClusterId)
-	if err := this.data.Put(key, []byte(value), writeOptions); err != nil {
+
+	tenantUserKey := tenantUserKey(user.AccountId, user.AppId, user.TenantUserId)
+	val := []byte(fmt.Sprintf("%d", user.CloudId))
+	if err := this.search.Set(tenantUserKey, val); commons.NotNil(err) {
+		if err.Code() == api.ErrSearchExists.Code() {
+			return api.ErrUserExists
+		}
+		return err
+	}
+
+	//写入数据
+	key := cloudKey(user.AccountId, user.AppId, user.CloudId)
+	value, _ := json.Marshal(user)
+	if err := this.data.Put(key, value, writeOptions); err != nil {
 		return protocol.ErrorDB(err)
 	}
-	return this.syncSetUser(user)
+	return nil
 }
 
 //根据租户给定的用户ID获取用户
 func (this *UserServer) GetByTenantUserId(accountId uint64, appId uint64, userId string) (*api.User, *protocol.TenuredError) {
-	key := tenantUserKey(accountId, appId, userId)
-	if val, err := this.data.Get(key, readOptions); err != nil {
-		if err.Error() == levelDBNotFound {
+	tenantUserKey := tenantUserKey(accountId, appId, userId)
+	if val, err := this.search.Get(tenantUserKey); commons.NotNil(err) {
+		if err.Code() == api.ErrSearchNotExists.Code() {
 			return nil, api.ErrUserNotExists
-		} else {
-			return nil, protocol.ErrorDB(err)
 		}
+		return nil, err
 	} else {
-		clusterId, _ := strconv.ParseUint(string(val), 10, 64)
-		return this.syncGetUser(accountId, appId, clusterId)
+		cloudId, _ := strconv.ParseUint(string(val), 10, 64)
+		return this.cluster.GetByCloudId(accountId, appId, cloudId)
 	}
 }
 
 //根据租户给定的用户ID获取用户
-func (this *UserServer) GetByClusterId(accountId uint64, appId uint64, clusterId uint64) (*api.User, *protocol.TenuredError) {
-	key := clusterUserKey(accountId, appId, clusterId)
+func (this *UserServer) GetByCloudId(accountId uint64, appId uint64, cloudId uint64) (*api.User, *protocol.TenuredError) {
+	key := cloudKey(accountId, appId, cloudId)
 	if val, err := this.data.Get(key, readOptions); err != nil {
-		if err.Error() == levelDBNotFound {
-			return nil, api.ErrUserNotExists
-		} else {
-			return nil, protocol.ErrorDB(err)
-		}
+		return nil, notFound(nil, api.ErrAccountNotExists)
 	} else {
 		user := &api.User{}
-		if err := json.Unmarshal(val, user); err != nil {
-			return nil, protocol.ErrorDB(err)
-		}
+		_ = json.Unmarshal(val, user)
 		return user, nil
 	}
 }
 
 //更新用户信息，仅允许单个属性更新
-func (this *UserServer) ModifyUser(accountId uint64, appId uint64, clusterId uint64, modifyKey string, modifyValue []byte) *protocol.TenuredError {
-	user, err := this.GetByClusterId(accountId, appId, clusterId)
+func (this *UserServer) ModifyUser(accountId uint64, appId uint64, cloudId uint64, modifyKey string, modifyValue []byte) *protocol.TenuredError {
+	user, err := this.GetByCloudId(accountId, appId, cloudId)
 	if err != nil {
 		return err
 	}
-
 	switch modifyKey {
 	case "NickName":
 		user.NickName = string(modifyKey)
@@ -119,22 +112,26 @@ func (this *UserServer) ModifyUser(accountId uint64, appId uint64, clusterId uin
 	default:
 		user.Attrs[modifyKey] = string(modifyKey)
 	}
+
+	//写入数据
+	key := cloudKey(user.AccountId, user.AppId, user.CloudId)
+	value, _ := json.Marshal(user)
+	if err := this.data.Put(key, value, writeOptions); err != nil {
+		return protocol.ErrorDB(err)
+	}
 	return nil
 }
 
-func (this *UserServer) RequestLoginToken(requestToken *api.TokenRequest) (*api.TokenResponse, *protocol.TenuredError) {
-	_, err := this.GetByClusterId(requestToken.AccountId, requestToken.AppId, requestToken.ClusterId)
-	if err != nil {
+func (this *UserServer) RequestLoginToken(req *api.TokenRequest) (*api.TokenResponse, *protocol.TenuredError) {
+	if _, err := this.GetByCloudId(req.AccountId, req.AppId, req.CloudId); err != nil {
 		return nil, err
 	}
 	uuidV4, _ := uuid.NewV4()
-
 	token := &api.TokenResponse{
 		Token:  strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
-		Linker: "", ExpireTime: requestToken.ExpireTime,
+		Linker: "", ExpireTime: req.ExpireTime,
 	}
-
-	key := tokenKey(requestToken.AccountId, requestToken.AppId, requestToken.ClusterId)
+	key := tokenKey(req.AccountId, req.AppId, req.CloudId)
 	val, _ := json.Marshal(token)
 	if err := this.data.Put(key, val, writeOptions); err != nil {
 		return nil, protocol.ErrorDB(err)
@@ -142,8 +139,8 @@ func (this *UserServer) RequestLoginToken(requestToken *api.TokenRequest) (*api.
 	return token, nil
 }
 
-func (this *UserServer) GetToken(accountId, appId, clusterId uint64) (*api.TokenResponse, *protocol.TenuredError) {
-	key := tokenKey(accountId, appId, clusterId)
+func (this *UserServer) GetToken(accountId, appId, cloudId uint64) (*api.TokenResponse, *protocol.TenuredError) {
+	key := tokenKey(accountId, appId, cloudId)
 	if val, err := this.data.Get(key, readOptions); err != nil {
 		return nil, protocol.ErrorDB(err)
 	} else {
@@ -153,89 +150,17 @@ func (this *UserServer) GetToken(accountId, appId, clusterId uint64) (*api.Token
 	}
 }
 
-func (this *UserServer) selectAddress(accountId, appId, clusterId uint64) (string, *protocol.TenuredError) {
-	serverInstances, retKey, err := this.loadBalance.Select(api.UserServiceGetByClusterId, accountId, appId, clusterId)
-	if err != nil || len(serverInstances) == 0 || registry.AllNotOK(serverInstances...) {
-		return "", protocol.ErrorRouter()
-	}
-	defer this.loadBalance.Return(api.UserServiceGetByClusterId, retKey)
-	return serverInstances[0].Address, nil
-}
-
-func (this *UserServer) syncSetUser(user *api.User) *protocol.TenuredError {
-	address, err := this.selectAddress(user.AccountId, user.AppId, user.ClusterId)
-	if !commons.IsNil(err) {
-		return protocol.ConvertError(err)
-	}
-	value, _ := json.Marshal(user)
-	//就是本地服务
-	if this.server.Address == address {
-		key := clusterUserKey(user.AccountId, user.AppId, user.ClusterId)
-		if err := this.data.Put(key, value, writeOptions); err != nil {
-			return protocol.ErrorDB(err)
-		}
-		return nil
-	}
-
-	request := protocol.NewRequest(api.UserServiceRange.Max)
-	request.Body = value
-	if response, err := this.client.Invoke(address, request, time.Millisecond*3000); err != nil {
-		return protocol.ConvertError(err)
-	} else if !response.IsSuccess() {
-		return response.GetError()
-	}
-	return nil
-}
-
-func (this *UserServer) syncGetUser(accountId, appId, clusterId uint64) (*api.User, *protocol.TenuredError) {
-	address, err := this.selectAddress(accountId, appId, clusterId)
-	if !commons.IsNil(err) {
-		return nil, protocol.ConvertError(err)
-	}
-	if this.server.Address == address {
-		return this.GetByClusterId(accountId, appId, clusterId)
-	}
-
-	request := protocol.NewRequest(api.UserServiceGetByClusterId)
-	_ = request.SetHeader(&struct {
-		AccountId uint64 `json:"accountId"`
-		AppId     uint64 `json:"appId"`
-		ClusterId uint64 `json:"clusterId"`
-	}{
-		AccountId: accountId,
-		AppId:     appId,
-		ClusterId: clusterId,
-	})
-	user := &api.User{}
-	if response, err := this.client.Invoke(address, request, time.Millisecond*3000); !commons.IsNil(err) {
-		return nil, protocol.ConvertError(err)
-	} else if !response.IsSuccess() {
-		return nil, response.GetError()
-	} else {
-		_ = response.GetHeader(user)
-		return user, nil
-	}
-}
-
-func (this *UserServer) handlerSyncUser() error {
-	this.server.RegisterCommandProcesser(api.UserServiceRange.Max, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
-		user := &api.User{}
-		_ = json.Unmarshal(request.Body, user)
-		key := clusterUserKey(user.AccountId, user.AppId, user.ClusterId)
-
-		response := protocol.NewACK(request.ID())
-		if err := this.data.Put(key, request.Body, writeOptions); err != nil {
-			response.RemotingError(protocol.ErrorDB(err))
-		}
-		if err := channel.Write(response, time.Second*3); err != nil {
-			logger.Warn("sync set user response error", err)
-		}
-	}, this.manager.Get("User.SyncSetUser"))
-	return nil
+func (this *UserServer) SetRegistry(serviceRegistry registry.ServiceRegistry) {
+	this.reg = serviceRegistry
 }
 
 func (this *UserServer) Start() (err error) {
 	logger.Debug("start user store.")
+
+	this.loadBalance = NewLoadBalance(this.storeName, this.reg)
+	this.search = client.NewSearchServiceClient(this.loadBalance)
+	this.cluster = client.NewUserServiceClient(this.loadBalance)
+
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		logger.Error("start account store error: ", err)
 		return
@@ -244,11 +169,20 @@ func (this *UserServer) Start() (err error) {
 		logger.Error("start user store error: ", err)
 		return err
 	}
-	return this.handlerSyncUser()
+	if err = commons.StartIfService(this.search); err != nil {
+		return
+	}
+	if err = commons.StartIfService(this.cluster); err != nil {
+		return
+	}
+	return commons.StartIfService(this.loadBalance)
 }
 
 func (this *UserServer) Shutdown(interrupt bool) {
 	if err := this.data.Close(); err != nil {
 		logger.Error("close user error: ", err)
 	}
+	commons.ShutdownIfService(this.loadBalance, interrupt)
+	commons.ShutdownIfService(this.search, interrupt)
+	commons.ShutdownIfService(this.cluster, interrupt)
 }

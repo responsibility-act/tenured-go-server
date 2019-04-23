@@ -134,8 +134,8 @@ type CheckAccountApp {
 errors {
     AccountExists(2001,用户已经存在)
     AccountNotExists(2002,用户不存在)
-    MobileExists(2003,手机号已被占用)
-    EmailExists(2004,邮箱已经被占用)
+    MobileRegistered(2003,手机号已被注册)
+    EmailRegistered(2004,邮箱已经被注册)
     AccountAppExists(2005,账户APP已经存在)
     AccountAppNotExists(2006,账户APP不存在)
 }
@@ -143,11 +143,17 @@ errors {
 //账户申请接口
 service AccountService(2000) {
 
-    //申请用户
+    //申请用户，leveldb引擎申请账户之前需要传递账户snowflakeID
     Apply(Account) () error(AccountExists,MobileExists)
 
     //根据用户ID获取用户
     Get(Id uint64) (Account) error(AccountNotExists)
+
+    //根据手机号获取用户信息
+    GetByMobile(mobile string) (Account) error(AccountNotExists)
+
+    //根据邮箱获取用户信息
+    GetByEmail(email string) (Account) error(AccountNotExists)
 
     //搜索审核未通过或者审核被拒绝账号，时间倒叙排列
     Search(Search) (SearchResult) loadBalance(none)

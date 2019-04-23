@@ -11,8 +11,9 @@ import (
 
 //全局搜索服务
 type SearchServer struct {
-	dataPath string
-	data     *leveldb.DB
+	storeName string
+	dataPath  string
+	data      *leveldb.DB
 }
 
 func (this *SearchServer) Put(key string, value []byte) *protocol.TenuredError {
@@ -37,10 +38,7 @@ func (this *SearchServer) Set(key string, body []byte) *protocol.TenuredError {
 
 func (this *SearchServer) Get(key string) ([]byte, *protocol.TenuredError) {
 	if value, err := this.data.Get([]byte(key), readOptions); err != nil {
-		if err.Error() == levelDBNotFound {
-			return nil, api.ErrSearchNotExists
-		}
-		return nil, protocol.ErrorDB(err)
+		return nil, notFound(err, api.ErrSearchNotExists)
 	} else {
 		return value, nil
 	}
@@ -75,8 +73,9 @@ func (this *SearchServer) Shutdown(interrupt bool) {
 	}
 }
 
-func NewSearchServer(dataPath string) (*SearchServer, error) {
+func NewSearchServer(storeName, dataPath string) (*SearchServer, error) {
 	return &SearchServer{
-		dataPath: dataPath + "/store/search",
+		storeName: storeName,
+		dataPath:  dataPath + "/store/search",
 	}, nil
 }

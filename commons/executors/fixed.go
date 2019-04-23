@@ -3,6 +3,7 @@ package executors
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/future"
+	"reflect"
 	"sync"
 )
 
@@ -72,6 +73,7 @@ func execFn(qb *queueBucket) {
 	defer func() {
 		if e := recover(); e != nil {
 			err := commons.Catch(e)
+			logger.Warn("executor fn ", reflect.TypeOf(qb.fn).String(), ", error ", err)
 			if qb.fu != nil {
 				qb.fu.Exception(err)
 			}

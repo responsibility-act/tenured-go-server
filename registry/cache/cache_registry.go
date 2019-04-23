@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"reflect"
 )
@@ -79,6 +80,14 @@ func (this *CacheServiceRegistry) filterTags(serverInstances []*registry.ServerI
 		}
 		return instances
 	}
+}
+
+func (this *CacheServiceRegistry) Start() error {
+	return commons.StartIfService(this.reg)
+}
+
+func (this *CacheServiceRegistry) Shutdown(interrupt bool) {
+	commons.ShutdownIfService(this.reg, interrupt)
 }
 
 func NewCacheRegistry(reg registry.ServiceRegistry) registry.ServiceRegistry {

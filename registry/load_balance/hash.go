@@ -83,7 +83,7 @@ func (this *HashLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*
 		_, value = this.tree.Min()
 	}
 
-	serverId := value.(*element).Id
+	serverId := value.(string)
 	return []*registry.ServerInstance{this.serverInstances[serverId]}, "", nil
 }
 

@@ -16,3 +16,14 @@ func (this *AuthHeader) String() string {
 	return fmt.Sprintf("AuthHeader{module=%s, address=%s, attrs=%v}",
 		this.Module, this.Address, this.Attributes)
 }
+
+type TuplePairHeader struct {
+	First  string
+	Second string
+}
+
+type TupleTripletHeader struct {
+	X string
+	Y string
+	Z string
+}

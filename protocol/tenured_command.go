@@ -84,11 +84,19 @@ func (this *TenuredCommand) SetHeader(header interface{}) error {
 	}
 }
 
+func (this *TenuredCommand) SetSafeHeader(header interface{}) {
+	_ = this.SetHeader(header)
+}
+
 func (this *TenuredCommand) GetHeader(header interface{}) error {
 	if commons.IsNil(this.header) || commons.IsNil(header) {
 		return ErrNoHeader
 	}
 	return json.Unmarshal(this.header, header)
+}
+
+func (this *TenuredCommand) GetSafeHeader(header interface{}) {
+	_ = this.GetHeader(header)
 }
 
 func (this *TenuredCommand) Error(error, message string) *TenuredCommand {

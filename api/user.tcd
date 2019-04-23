@@ -24,7 +24,7 @@ type User {
 	AppId uint64
 
 	//云用户ID
-	ClusterId uint64
+	CloudId uint64
 
     //租户用户ID，不允许修改、不允许超过32位
 	TenantUserId string
@@ -69,7 +69,7 @@ type TokenRequest {
     AppId uint64
 
     //集群ID
-    ClusterId uint64
+    CloudId uint64
 
     //用户使用的登录的IP地址
     IPAddress string
@@ -104,7 +104,7 @@ service UserService(3000) {
     GetByTenantUserId(accountId uint64, appId uint64, tenantUserId string) (User)
 
     //根据clusterId获取用户
-    GetByClusterId(accountId uint64, appId uint64, clusterId uint64) (User)
+    GetByCloudId(accountId uint64, appId uint64, cloudId uint64) (User)
 
     //更新用户信息，仅允许单个属性更新
     ModifyUser(accountId uint64, appId uint64, clusterId uint64, modifyKey string, modifyValue []byte) ()
