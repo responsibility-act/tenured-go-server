@@ -8,6 +8,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/services"
 	"github.com/ihaiker/tenured-go-server/services/console"
+	"github.com/ihaiker/tenured-go-server/services/linker"
 	"github.com/ihaiker/tenured-go-server/services/store"
 	"github.com/spf13/cobra"
 	"strings"
@@ -19,6 +20,7 @@ func init() {
 	serverConfig = map[string]interface{}{}
 	serverConfig["store"] = store.NewStoreConfig()
 	serverConfig["console"] = console.NewConsoleConfig()
+	serverConfig["linker"] = linker.NewLinkerConfig()
 }
 
 var ConfigCmd = &cobra.Command{

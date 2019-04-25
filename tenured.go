@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/services/console"
+	"github.com/ihaiker/tenured-go-server/services/linker"
 	"github.com/ihaiker/tenured-go-server/services/store"
 	"github.com/ihaiker/tenured-go-server/tools"
 	"github.com/spf13/cobra"
@@ -38,6 +39,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(store.StoreCmd)
 	rootCmd.AddCommand(console.ConsoleCommand)
+	rootCmd.AddCommand(linker.LinkerCmd)
 	rootCmd.AddCommand(tools.ConfigCmd)
 	rootCmd.AddCommand(tools.InstallCommand)
 	cobra.OnInitialize(initConfig)

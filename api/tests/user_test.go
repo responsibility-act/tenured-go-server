@@ -53,3 +53,16 @@ func TestUserGetCloud(t *testing.T) {
 	assert.Nil(t, err)
 	t.Log(user)
 }
+
+func TestRequestToken(t *testing.T) {
+	server := GetUserService()
+	rt := new(api.TokenRequest)
+	rt.AppId = 1
+	rt.AccountId = 1
+	rt.CloudId = 1
+	rt.IPAddress = "192.168.1.234"
+
+	rp, err := server.RequestLoginToken(rt)
+	assert.Nil(t, err)
+	t.Log(rp)
+}

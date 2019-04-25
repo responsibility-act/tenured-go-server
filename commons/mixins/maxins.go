@@ -16,6 +16,10 @@ const Registry = "consul://127.0.0.1:8500"
 const KeyDataPath = "tenured.dataPath"
 const DataPath = "/data/tenured"
 
+const PortStore = 6072
+const PortLinker = 6073
+const PortConsole = 6074
+
 func Get(key, value string) string {
 	if val, has := os.LookupEnv(key); has {
 		return val

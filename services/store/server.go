@@ -29,7 +29,7 @@ type storeServer struct {
 	executorManager executors.ExecutorManager
 	snowflakeId     *snowflake.Snowflake
 
-	serviceManger *commons.ServiceManager
+	serviceManager *commons.ServiceManager
 }
 
 func (this *storeServer) init() error {
@@ -62,7 +62,7 @@ func (this *storeServer) initExecutorManager() {
 			}
 		}
 	}
-	this.serviceManger.Add(this.executorManager)
+	this.serviceManager.Add(this.executorManager)
 }
 
 func (this *storeServer) initTenuredServer() (err error) {
@@ -80,13 +80,13 @@ func (this *storeServer) initTenuredServer() (err error) {
 		Attributes: this.config.Tcp.Attributes,
 	}
 
-	this.serviceManger.Add(this.server)
+	this.serviceManager.Add(this.server)
 	return nil
 }
 
 func (this *storeServer) initServicesInvoke() (err error) {
 	this.serviceInvokeManager = NewServicesInvokeManager(this.config, this.registry, this.server, this.executorManager)
-	this.serviceManger.Add(this.serviceInvokeManager)
+	this.serviceManager.Add(this.serviceInvokeManager)
 	if this.config.HasStore(api.StoreClusterId) {
 		this.server.RegisterCommandProcesser(api.ClusterIdServiceGet, func(channel remoting.RemotingChannel, request *protocol.TenuredCommand) {
 			logger.Debugf("Get clusterId: %s", channel.RemoteAddr())
@@ -171,10 +171,10 @@ func (this *storeServer) initRegistry() error {
 		return err
 	} else {
 		this.registry = cache.NewCacheRegistry(reg)
-		this.serviceManger.Add(this.registry)
+		this.serviceManager.Add(this.registry)
 	}
 	this.registryPlugins = registryPlugins
-	this.serviceManger.Add(this.registryPlugins)
+	this.serviceManager.Add(this.registryPlugins)
 	return nil
 }
 
@@ -208,7 +208,7 @@ func (this *storeServer) Start() error {
 	if err := this.init(); err != nil {
 		return err
 	}
-	if err := this.serviceManger.Start(); err != nil {
+	if err := this.serviceManager.Start(); err != nil {
 		return err
 	}
 	if err := this.registryService(); err != nil {
@@ -219,9 +219,9 @@ func (this *storeServer) Start() error {
 
 func (this *storeServer) Shutdown(interrupt bool) {
 	logger.Info("stop store server.")
-	this.serviceManger.Shutdown(interrupt)
+	this.serviceManager.Shutdown(interrupt)
 }
 
 func newStoreServer(config *storeConfig) *storeServer {
-	return &storeServer{config: config, serviceManger: commons.NewServiceManager()}
+	return &storeServer{config: config, serviceManager: commons.NewServiceManager()}
 }

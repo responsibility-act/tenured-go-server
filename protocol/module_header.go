@@ -4,8 +4,8 @@ import "fmt"
 
 type AuthHeader struct {
 	Module     string            `json:"module"`
-	Address    string            `json:"address"`
-	Attributes map[string]string `json:"attributes"`
+	Address    string            `json:"address,omitempty"`
+	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
 func (this *AuthHeader) AddAttributes(key, value string) {

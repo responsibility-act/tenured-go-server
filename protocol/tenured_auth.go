@@ -7,17 +7,17 @@ import (
 const auth_attributes_name = "auth_token"
 
 type TenuredAuthChecker interface {
-	Auth(channel remoting.RemotingChannel, command *TenuredCommand) error
+	Auth(channel remoting.RemotingChannel, command *TenuredCommand) *TenuredError
 	IsAuthed(channel remoting.RemotingChannel) bool
 }
 
 type ModuleAuthChecker struct {
 }
 
-func (this *ModuleAuthChecker) Auth(channel remoting.RemotingChannel, command *TenuredCommand) error {
+func (this *ModuleAuthChecker) Auth(channel remoting.RemotingChannel, command *TenuredCommand) *TenuredError {
 	header := &AuthHeader{}
 	if err := command.GetHeader(header); err != nil {
-		return err
+		return ConvertError(err)
 	} else {
 		channel.Attributes()[auth_attributes_name] = true
 	}

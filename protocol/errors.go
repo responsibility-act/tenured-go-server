@@ -33,36 +33,22 @@ func ConvertError(err error) *TenuredError {
 
 func ErrorNoAuth() *TenuredError {
 	return &TenuredError{
-		code: "1000", message: "not found auth info.",
-	}
-}
-
-func ErrorInvalidAuth() *TenuredError {
-	return &TenuredError{
-		code: "1001", message: "invalid auth",
+		code: "1000", message: "Not allowed access, not certified",
 	}
 }
 
 func ErrorNoModule() *TenuredError {
 	return &TenuredError{
-		code: "1002", message: "Can't found module",
+		code: "0000", message: "Can't found module",
 	}
 }
 
-func ErrorInvalidHeader(err error) *TenuredError {
-	return &TenuredError{code: "1003", message: err.Error()}
-}
-
 func ErrorDB(err error) *TenuredError {
-	return &TenuredError{code: "1004", message: err.Error()}
+	return &TenuredError{code: "0001", message: err.Error()}
 }
 
 func ErrorRouter() *TenuredError {
-	return &TenuredError{code: "1005", message: "No valid route"}
-}
-
-func ErrorInvalidParameter() *TenuredError {
-	return &TenuredError{code: "1006", message: "Invalid parameter"}
+	return &TenuredError{code: "0002", message: "No valid route"}
 }
 
 func NewError(code, message string) *TenuredError {

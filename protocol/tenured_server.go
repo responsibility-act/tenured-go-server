@@ -15,7 +15,7 @@ func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, 
 	if command.code == REQUEST_CODE_ATUH {
 		if err := this.AuthChecker.Auth(channel, command); err != nil {
 			logger.Infof("auth channel(%s) error: %s", channel.RemoteAddr(), err.Error())
-			this.makeAck(channel, command, nil, ErrorInvalidAuth())
+			this.makeAck(channel, command, nil, err)
 		} else {
 			logger.Debugf("channel(%s) auth success", channel.RemoteAddr())
 			this.makeAck(channel, command, this.AuthHeader, nil)

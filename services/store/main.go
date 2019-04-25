@@ -14,10 +14,9 @@ var storeService *storeServer
 var storeCfg *storeConfig
 
 var StoreCmd = &cobra.Command{
-	Use:     "store",
-	Short:   "Tenured Store Server",
-	Long:    `Complete documentation is available at http://tenured.renzhen.la/store`,
-	Version: "1.0.0",
+	Use:   "store",
+	Short: "Tenured Store Server",
+	Long:  `Complete documentation is available at http://tenured.renzhen.la/store`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		config, err := cmd.PersistentFlags().GetString("config")
 		if err != nil {

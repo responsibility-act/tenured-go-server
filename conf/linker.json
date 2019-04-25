@@ -1,0 +1,17 @@
+{
+	"prefix": "tenured",
+	"data": "/data/tenured",
+	"logs": {
+		"output": "stdout"
+	},
+	"registry": {
+		"address": "consul://127.0.0.1:8500"
+	},
+	"tcp": {
+		"port": 6073
+	},
+	"executors": {},
+	"engine": {
+		"type": "leveldb"
+	}
+}

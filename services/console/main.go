@@ -13,10 +13,9 @@ var consoleServer *ConsoleServer
 var consoleConfig *ConsoleConfig
 
 var ConsoleCommand = &cobra.Command{
-	Use:     "console",
-	Short:   "Tenured Console",
-	Long:    `Complete documentation is available at http://tenured.renzhen.la/console.html`,
-	Version: "1.0.0",
+	Use:   "console",
+	Short: "Tenured Console",
+	Long:  `Complete documentation is available at http://tenured.renzhen.la/console.html`,
 	//Args:    cobra.MinimumNArgs(1),
 	Example: `	tenured console -f <path>`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {

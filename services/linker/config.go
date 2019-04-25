@@ -1,7 +1,6 @@
-package store
+package linker
 
 import (
-	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/commons/nets"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
@@ -9,12 +8,12 @@ import (
 	"github.com/ihaiker/tenured-go-server/services"
 )
 
-type storeConfig struct {
-	Prefix string `json:"prefix" yaml:"prefix"` //注册服务的前缀，所有系统保持一致
+type linkerConfig struct {
+	//注册服务的前缀，所有系统保持一致
+	Prefix string `json:"prefix" yaml:"prefix"`
 
-	Data string `json:"data" yaml:"data"` //数据存储位置
-
-	Stores []string `json:"stores" yaml:"stores"`
+	//数据存储位置
+	Data string `json:"data" yaml:"data"`
 
 	Logs *services.Logs `json:"logs" json:"logs"`
 
@@ -27,23 +26,13 @@ type storeConfig struct {
 	Engine *engine.StoreEngineConfig `json:"engine" yaml:"engine"`
 }
 
-func (this *storeConfig) HasStore(name string) bool {
-	for _, store := range this.Stores {
-		if store == name {
-			return true
-		}
-	}
-	return false
-}
-
-func NewStoreConfig() *storeConfig {
-	return &storeConfig{
+func NewLinkerConfig() *linkerConfig {
+	return &linkerConfig{
 		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
 		Data:   mixins.Get(mixins.KeyDataPath, mixins.DataPath),
-		Stores: api.StoreAll,
 		Logs: &services.Logs{
 			Level:  "info",
-			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/store.log",
+			Path:   mixins.Get(mixins.KeyDataPath, mixins.DataPath) + "/logs/linker.log",
 			Output: "stdout",
 		},
 		Registry: &services.Registry{
@@ -51,15 +40,12 @@ func NewStoreConfig() *storeConfig {
 		},
 		Tcp: &services.Tcp{
 			IpAndPort: &nets.IpAndPort{
-				Port: mixins.PortStore,
+				Port: mixins.PortLinker,
 			},
 			RemotingConfig: remoting.DefaultConfig(),
 		},
 		Engine: &engine.StoreEngineConfig{
 			Type: "leveldb",
-			Attributes: map[string]string{
-				"dataPath": mixins.Get(mixins.KeyDataPath, mixins.DataPath),
-			},
 		},
 		Executors: services.Executors(map[string]string{}),
 	}

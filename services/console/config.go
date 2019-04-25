@@ -24,7 +24,7 @@ type ConsoleConfig struct {
 func NewConsoleConfig() *ConsoleConfig {
 	return &ConsoleConfig{
 		HTTP: &nets.IpAndPort{
-			Port:           6074,
+			Port:           mixins.PortConsole,
 			EnableAutoPort: true,
 		},
 		Prefix: mixins.Get(mixins.KeyServerPrefix, mixins.ServerPrefix),
