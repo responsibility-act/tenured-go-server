@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/ihaiker/tenured-go-server/registry"
+	"sync"
 
 	"net"
-	"reflect"
 	"strconv"
 )
 
 //服务注册监听者
 type subscriber struct {
-	listeners map[uintptr]registry.RegistryNotifyListener
+	listeners map[string]registry.RegistryNotifyListener
 	services  map[string]*registry.ServerInstance
 	closeChan chan struct{}
 }
@@ -31,6 +31,7 @@ func (this *subscriber) close() {
 }
 
 type ConsulServiceRegistry struct {
+	lock   *sync.Mutex
 	client *api.Client
 	config *ConsulConfig
 	//订阅信息
@@ -175,6 +176,9 @@ func (this *ConsulServiceRegistry) loadSubscribeHealth(serverName string) {
 }
 
 func (this *ConsulServiceRegistry) Subscribe(serverName string, listener registry.RegistryNotifyListener) error {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	logger.Info("Subscribe ", serverName)
 	if this.addSubscribe(serverName, listener) {
 		go this.loadSubscribeHealth(serverName)
@@ -183,6 +187,9 @@ func (this *ConsulServiceRegistry) Subscribe(serverName string, listener registr
 }
 
 func (this *ConsulServiceRegistry) Unsubscribe(serverName string, listener registry.RegistryNotifyListener) error {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	logger.Info("Unsubscribe ", serverName, ",fn ", listener)
 	if this.removeSubscribe(serverName, listener) {
 		if sub, has := this.subscribes[serverName]; has {
@@ -209,7 +216,7 @@ func (this *ConsulServiceRegistry) Lookup(serverName string, tags []string) ([]*
 func (this *ConsulServiceRegistry) getOrCreateSubscribe(name string) *subscriber {
 	if subInfo, has := this.subscribes[name]; !has {
 		subInfo = &subscriber{
-			listeners: map[uintptr]registry.RegistryNotifyListener{},
+			listeners: map[string]registry.RegistryNotifyListener{},
 			services:  map[string]*registry.ServerInstance{},
 			closeChan: make(chan struct{}),
 		}
@@ -221,24 +228,28 @@ func (this *ConsulServiceRegistry) getOrCreateSubscribe(name string) *subscriber
 //@return 返回是否是此服务的第一个监听器
 func (this *ConsulServiceRegistry) addSubscribe(name string, listener registry.RegistryNotifyListener) bool {
 	sets := this.getOrCreateSubscribe(name)
-	//tome: hash of unhashable
-	pointer := reflect.ValueOf(listener).Pointer()
+	from := len(sets.listeners)
+	pointer := registry.NotifyPointer(listener)
 	sets.listeners[pointer] = listener
-	return len(sets.listeners) == 1
+	return from == 0 && len(sets.listeners) == 1
 }
 
 //@return 是否是次服务的最后一个监听器
 func (this *ConsulServiceRegistry) removeSubscribe(name string, listener registry.RegistryNotifyListener) bool {
-	sets := this.getOrCreateSubscribe(name)
-	//tome: hash of unhashable.
-	pointer := reflect.ValueOf(listener).Pointer()
-	delete(sets.listeners, pointer)
-	return len(sets.listeners) == 0
+	if sets, has := this.subscribes[name]; has {
+		pointer := registry.NotifyPointer(listener)
+		from := len(sets.listeners)
+		delete(sets.listeners, pointer)
+		return from == 1 && len(sets.listeners) == 0
+	} else {
+		return false
+	}
 }
 
 func newRegistry(pluginConfig *registry.PluginConfig) (*ConsulServiceRegistry, error) {
 	config := &ConsulConfig{config: pluginConfig}
 	serviceRegistry := &ConsulServiceRegistry{
+		lock:       new(sync.Mutex),
 		config:     config,
 		subscribes: map[string]*subscriber{},
 	}

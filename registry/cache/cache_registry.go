@@ -3,13 +3,12 @@ package cache
 import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/registry"
-	"reflect"
 )
 
 type CacheServiceRegistry struct {
 	reg registry.ServiceRegistry
 
-	cache map[uintptr]registry.RegistryNotifyListener
+	cache map[string]registry.RegistryNotifyListener
 
 	serverCache map[string][]*registry.ServerInstance
 }
@@ -23,7 +22,7 @@ func (this *CacheServiceRegistry) Unregister(serverId string) error {
 }
 
 func (this *CacheServiceRegistry) Subscribe(serverName string, listener registry.RegistryNotifyListener) error {
-	pointer := reflect.ValueOf(listener).Pointer()
+	pointer := registry.NotifyPointer(listener)
 	if _, has := this.cache[pointer]; has {
 		return nil
 	}
@@ -47,7 +46,7 @@ func (this *CacheServiceRegistry) Subscribe(serverName string, listener registry
 }
 
 func (this *CacheServiceRegistry) Unsubscribe(serverName string, listener registry.RegistryNotifyListener) error {
-	pointer := reflect.ValueOf(listener).Pointer()
+	pointer := registry.NotifyPointer(listener)
 	if l, has := this.cache[pointer]; has {
 		return this.reg.Unsubscribe(serverName, l)
 	} else {
@@ -93,7 +92,7 @@ func (this *CacheServiceRegistry) Shutdown(interrupt bool) {
 func NewCacheRegistry(reg registry.ServiceRegistry) registry.ServiceRegistry {
 	return &CacheServiceRegistry{
 		reg:         reg,
-		cache:       map[uintptr]registry.RegistryNotifyListener{},
+		cache:       map[string]registry.RegistryNotifyListener{},
 		serverCache: map[string][]*registry.ServerInstance{},
 	}
 }
