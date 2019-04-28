@@ -8,7 +8,8 @@ import (
 
 type TenuredClient struct {
 	tenuredService
-	*AuthHeader
+	AuthHeader          interface{}
+	AuthResponseHandler func(client *TenuredClient, cmd *TenuredCommand)
 }
 
 func (this *TenuredClient) OnChannel(channel remoting.RemotingChannel) error {
@@ -27,12 +28,15 @@ func (this *TenuredClient) OnChannel(channel remoting.RemotingChannel) error {
 		return err
 	}
 
-	header := &AuthHeader{}
-	if err := resp.GetHeader(header); err != nil {
-		logger.Warning("Cannot get the information returned by the server: ", err.Error())
-		return nil
-	} else {
-		logger.Info("Get the information returned by the server:", header)
+	if this.AuthResponseHandler != nil {
+		this.AuthResponseHandler(this, resp)
+		/*header := &AuthHeader{}
+		if err := resp.GetHeader(header); err != nil {
+			logger.Warning("Cannot get the information returned by the server: ", err.Error())
+			return nil
+		} else {
+			logger.Info("Get the information returned by the server:", header)
+		}*/
 	}
 	return nil
 }

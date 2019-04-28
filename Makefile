@@ -1,6 +1,8 @@
-version=1.0.0
-build_date=`date +"%F %T"`
-param=-X main.VERSION=${version} -X 'main.BUILD_TIME=${build_date}' -X 'main.GO_VERSION=`go version`'
+Version=1.0.0
+BuildDate=$(shell date +"%F %T")
+GitCommit=$(shell git rev-parse HEAD)
+
+param=-X main.VERSION=${Version} -X main.GIT_VERSION=${GitCommit} -X 'main.BUILD_TIME=${BuildDate}'
 
 tenured=bin/tenured
 

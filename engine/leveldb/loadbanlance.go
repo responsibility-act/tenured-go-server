@@ -38,6 +38,7 @@ func NewLoadBalance(serverName string, reg registry.ServiceRegistry) load_balanc
 		round := load_balance.NewRoundLoadBalance(serverName, api.StoreAccount, reg)
 		lbm.AddLoadBalance(api.AccountServiceGetByMobile, round)
 		lbm.AddLoadBalance(api.AccountServiceGetByEmail, round)
+		lbm.AddLoadBalance(api.AccountServiceSearch, load_balance.NewNoneLoadBalance(serverName, api.StoreAccount, reg))
 	}
 
 	//search
@@ -61,6 +62,11 @@ func NewLoadBalance(serverName string, reg registry.ServiceRegistry) load_balanc
 	//snowflake
 	{
 		lbm.AddLoadBalance(api.ClusterIdServiceGet, load_balance.NewRoundLoadBalance(serverName, api.StoreClusterId, reg))
+	}
+
+	// linker
+	{
+		lbm.AddLoadBalance(api.LinkerServiceGetLinkedCount, load_balance.NewNoneLoadBalance(serverName, "", reg))
 	}
 	return lbm
 }

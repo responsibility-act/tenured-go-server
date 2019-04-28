@@ -55,19 +55,19 @@ func Int8(i int8) []byte {
 func ToInt8(bs []byte) int8 {
 	return int8(ToUInt8(bs))
 }
-func Int16(i uint16) []byte {
+func Int16(i int16) []byte {
 	return UInt16(uint16(i))
 }
 func ToInt16(bs []byte) int16 {
 	return int16(ToUInt16(bs))
 }
-func Int32(i uint32) []byte {
+func Int32(i int32) []byte {
 	return UInt32(uint32(i))
 }
 func ToInt32(bs []byte) int32 {
 	return int32(ToUInt32(bs))
 }
-func Int64(i uint64) []byte {
+func Int64(i int64) []byte {
 	return UInt64(uint64(i))
 }
 func ToInt64(bs []byte) int64 {

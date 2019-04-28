@@ -1,0 +1,5 @@
+
+service LinkerService(4000) {
+    //获取当前连接点的连接数,返回个数，使用了uint64转码了
+    GetLinkedCount() ([]byte) loadBalance(none)
+}

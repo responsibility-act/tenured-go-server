@@ -8,7 +8,7 @@ import (
 type TenuredServer struct {
 	tenuredService
 	AuthChecker TenuredAuthChecker
-	*AuthHeader
+	AuthHeader  interface{}
 }
 
 func (this *TenuredServer) onCommandProcesser(channel remoting.RemotingChannel, command *TenuredCommand) {

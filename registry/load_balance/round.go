@@ -2,6 +2,7 @@ package load_balance
 
 import (
 	"github.com/ihaiker/tenured-go-server/commons/atomic"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
 )
 
@@ -13,19 +14,19 @@ type roundLoadBalance struct {
 }
 
 func (this *roundLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*registry.ServerInstance, string, error) {
-	currentRangeIndex := this.rangeIndex.GetAndIncrement()
 	if ss, err := this.reg.Lookup(this.serverName, []string{this.serverTag}); err != nil {
 		return nil, "", err
 	} else if len(ss) == 0 {
 		return ss, "", err
 	} else {
-		idx := int(currentRangeIndex % uint32(len(ss)))
-		if registry.IsOK(ss[idx]) {
-			return []*registry.ServerInstance{ss[idx]}, "", nil
-		} else {
-			//重新选择
-			return this.Select(requestCode, obj...)
+		for i := 0; i < len(ss); i++ {
+			currentRangeIndex := this.rangeIndex.GetAndIncrement()
+			idx := int(currentRangeIndex % uint32(len(ss)))
+			if registry.IsOK(ss[idx]) {
+				return []*registry.ServerInstance{ss[idx]}, "", nil
+			}
 		}
+		return nil, "", protocol.ErrorRouter()
 	}
 }
 

@@ -1,8 +1,11 @@
 package linker
 
 import (
+	"github.com/ihaiker/tenured-go-server/api"
+	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/ihaiker/tenured-go-server/protocol"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
 )
 
 type Auth struct {
@@ -22,11 +25,16 @@ type Auth struct {
 }
 
 type LinkerAuthChecker struct {
-	//userServer api.AccountService
+	serverAddress string
+	userServer    api.UserService
 }
 
-func NewLinkerAuthChecker() (*LinkerAuthChecker, error) {
-	return &LinkerAuthChecker{}, nil
+func NewLinkerAuthChecker(serverAddress string, loadBalance load_balance.LoadBalance) (*LinkerAuthChecker, error) {
+	s := &LinkerAuthChecker{
+		serverAddress: serverAddress,
+		userServer:    client.NewUserServiceClient(loadBalance),
+	}
+	return s, nil
 }
 
 func (this *LinkerAuthChecker) Auth(channel remoting.RemotingChannel, command *protocol.TenuredCommand) *protocol.TenuredError {
@@ -35,6 +43,13 @@ func (this *LinkerAuthChecker) Auth(channel remoting.RemotingChannel, command *p
 		return ErrAuth
 	}
 	logger.Info("用户认证：", auth)
+
+	if token, err := this.userServer.GetToken(auth.AccountId, auth.AppId, auth.CloudId); err != nil {
+		return err
+	} else if token.Token != auth.Token || token.Linker != this.serverAddress {
+		logger.Info("用户非法连接：", auth)
+		return ErrAuth
+	}
 	channel.Attributes()["auth"] = auth
 	return nil
 }

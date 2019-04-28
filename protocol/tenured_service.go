@@ -20,6 +20,9 @@ type responseTableBlock struct {
 type TenuredService interface {
 	commons.Service
 
+	SetSessionManager(manager SessionManager)
+	GetSessionManager() SessionManager
+
 	Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error)
 
 	AsyncInvoke(channel string, command *TenuredCommand, timeout time.Duration,
@@ -34,7 +37,17 @@ type tenuredService struct {
 	remoting         remoting.Remoting
 	responseTables   c8tmap.ConcurrentMap //map[uint32]*responseTableBlock，tome: golang map不能并发写入。
 	commandProcesser map[uint16]*tenuredCommandRunner
+
+	sessionManager SessionManager
 	*remoting.HandlerWrapper
+}
+
+func (this *tenuredService) SetSessionManager(manager SessionManager) {
+	this.sessionManager = manager
+}
+
+func (this *tenuredService) GetSessionManager() SessionManager {
+	return this.sessionManager
 }
 
 func (this *tenuredService) Invoke(channel string, command *TenuredCommand, timeout time.Duration) (*TenuredCommand, error) {
@@ -162,8 +175,17 @@ func (this *tenuredService) OnIdle(channel remoting.RemotingChannel) {
 	}
 }
 
+func (this *tenuredService) OnConnect(channel remoting.RemotingChannel) {
+	if this.sessionManager != nil {
+		this.sessionManager.OnConnect(channel)
+	}
+}
+
 func (this *tenuredService) OnClose(channel remoting.RemotingChannel) {
 	this.fastFailChannel(channel)
+	if this.sessionManager != nil {
+		this.sessionManager.OnClose(channel)
+	}
 }
 
 func (this *tenuredService) fastFailChannel(channel remoting.RemotingChannel) {

@@ -19,6 +19,7 @@ const DataPath = "/data/tenured"
 const PortStore = 6072
 const PortLinker = 6073
 const PortConsole = 6074
+const PortTenant = 6075
 
 func Get(key, value string) string {
 	if val, has := os.LookupEnv(key); has {

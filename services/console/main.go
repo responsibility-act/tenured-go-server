@@ -1,6 +1,5 @@
 package console
 
-import "C"
 import (
 	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/commons/runtime/signal"

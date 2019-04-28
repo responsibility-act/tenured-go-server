@@ -13,6 +13,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -35,14 +36,19 @@ type UserServer struct {
 
 	reg         registry.ServiceRegistry
 	loadBalance load_balance.LoadBalance
-	search      api.SearchService
-	cluster     api.UserService
+
+	search  api.SearchService
+	cluster api.UserService
+	linker  api.LinkerService
+
+	serviceManager *commons.ServiceManager
 }
 
 func NewUserServer(serverName, dataPath string) (*UserServer, error) {
 	userServer := &UserServer{
-		storeName: serverName,
-		dataPath:  dataPath + "/store/user",
+		storeName:      serverName,
+		dataPath:       dataPath + "/store/user",
+		serviceManager: commons.NewServiceManager(),
 	}
 	return userServer, nil
 }
@@ -90,7 +96,7 @@ func (this *UserServer) GetByTenantUserId(accountId uint64, appId uint64, userId
 func (this *UserServer) GetByCloudId(accountId uint64, appId uint64, cloudId uint64) (*api.User, *protocol.TenuredError) {
 	key := cloudKey(accountId, appId, cloudId)
 	if val, err := this.data.Get(key, readOptions); err != nil {
-		return nil, notFound(nil, api.ErrAccountNotExists)
+		return nil, notFound(err, api.ErrAccountNotExists)
 	} else {
 		user := &api.User{}
 		_ = json.Unmarshal(val, user)
@@ -126,10 +132,24 @@ func (this *UserServer) RequestLoginToken(req *api.TokenRequest) (*api.TokenResp
 	if _, err := this.GetByCloudId(req.AccountId, req.AppId, req.CloudId); err != nil {
 		return nil, err
 	}
+
+	minLinkCount := int32(math.MaxInt32 - 1)
+	linker := ""
+	gl := new(load_balance.GlobalLoading)
+	for gl.NextNode() {
+		if v, err := this.linker.GetLinkedCount(gl); err != nil {
+			return nil, protocol.ErrorHandler(err)
+		} else {
+			if commons.ToInt32(v) < minLinkCount {
+				linker = gl.Server.Address
+			}
+		}
+	}
+
 	uuidV4, _ := uuid.NewV4()
 	token := &api.TokenResponse{
 		Token:  strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
-		Linker: "", ExpireTime: req.ExpireTime,
+		Linker: linker, ExpireTime: req.ExpireTime,
 	}
 	key := tokenKey(req.AccountId, req.AppId, req.CloudId)
 	val, _ := json.Marshal(token)
@@ -160,6 +180,8 @@ func (this *UserServer) Start() (err error) {
 	this.loadBalance = NewLoadBalance(this.storeName, this.reg)
 	this.search = client.NewSearchServiceClient(this.loadBalance)
 	this.cluster = client.NewUserServiceClient(this.loadBalance)
+	this.linker = client.NewLinkerServiceClient(this.loadBalance)
+	this.serviceManager.Add(this.loadBalance, this.search, this.cluster, this.linker)
 
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		logger.Error("start account store error: ", err)
@@ -169,20 +191,13 @@ func (this *UserServer) Start() (err error) {
 		logger.Error("start user store error: ", err)
 		return err
 	}
-	if err = commons.StartIfService(this.search); err != nil {
-		return
-	}
-	if err = commons.StartIfService(this.cluster); err != nil {
-		return
-	}
-	return commons.StartIfService(this.loadBalance)
+
+	return this.serviceManager.Start()
 }
 
 func (this *UserServer) Shutdown(interrupt bool) {
 	if err := this.data.Close(); err != nil {
 		logger.Error("close user error: ", err)
 	}
-	commons.ShutdownIfService(this.loadBalance, interrupt)
-	commons.ShutdownIfService(this.search, interrupt)
-	commons.ShutdownIfService(this.cluster, interrupt)
+	this.serviceManager.Shutdown(interrupt)
 }

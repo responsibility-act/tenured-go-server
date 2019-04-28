@@ -6,6 +6,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/services/console"
 	"github.com/ihaiker/tenured-go-server/services/linker"
 	"github.com/ihaiker/tenured-go-server/services/store"
+	"github.com/ihaiker/tenured-go-server/services/tenant"
 	"github.com/ihaiker/tenured-go-server/tools"
 	"github.com/spf13/cobra"
 	"os"
@@ -13,16 +14,16 @@ import (
 )
 
 var (
-	VERSION    string = "dev"
-	BUILD_TIME string = "2019-03-01 00:00:00"
-	GO_VERSION string = "go 1.12"
+	VERSION     string = "dev"
+	BUILD_TIME  string = "2019-03-01 00:00:00"
+	GO_VERSION  string = runtime.Version()
+	GIT_VERSION string = "0000"
 )
 
 var rootCmd = &cobra.Command{
 	Use: "tenured",
 	Short: "Tenured A completely open source IM cloud system.\n" +
-		"Build: " + BUILD_TIME + "\n" +
-		GO_VERSION,
+		"Build: " + BUILD_TIME + ", Go: " + GO_VERSION + ", GitLog:" + GIT_VERSION,
 	Long:    `Complete documentation is available at http://tenured.renzhen.la`,
 	Version: VERSION,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -40,6 +41,7 @@ func init() {
 	rootCmd.AddCommand(store.StoreCmd)
 	rootCmd.AddCommand(console.ConsoleCommand)
 	rootCmd.AddCommand(linker.LinkerCmd)
+	rootCmd.AddCommand(tenant.TenantCommand)
 	rootCmd.AddCommand(tools.ConfigCmd)
 	rootCmd.AddCommand(tools.InstallCommand)
 	cobra.OnInitialize(initConfig)

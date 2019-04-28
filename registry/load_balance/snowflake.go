@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/emirpasic/gods/utils"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
 
 	"github.com/ihaiker/tenured-go-server/commons/snowflake"
@@ -80,6 +81,10 @@ func (this *TimedHashLoadBalance) Shutdown(interrupt bool) {
 }
 
 func (this *TimedHashLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*registry.ServerInstance, string, error) {
+	if this.tree.Size() == 0 {
+		return nil, "", protocol.ErrorRouter()
+	}
+
 	//从请求参数参数中获取分区的snowflake生成的ID
 	snowflakeId := this.snowflakeExport(requestCode, obj...)
 	//分解此项ID值

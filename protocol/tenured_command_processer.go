@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 )
@@ -20,11 +21,19 @@ func (this *tenuredCommandRunner) onCommand(channel remoting.RemotingChannel, co
 
 	if this.executorService != nil {
 		if err := this.executorService.Execute(func() {
-			this.process(channel, command)
+			this.processCommand(channel, command)
 		}); err != nil {
 			logger.Errorf("command is error: %v", err)
 		}
 	} else {
-		this.process(channel, command)
+		this.processCommand(channel, command)
 	}
+}
+
+func (this *tenuredCommandRunner) processCommand(channel remoting.RemotingChannel, request *TenuredCommand) {
+	commons.Try(func() {
+		this.process(channel, request)
+	}, func(e error) {
+		logger.Errorf("process %d error: %s", request.code, e.Error())
+	})
 }

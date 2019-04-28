@@ -1,0 +1,17 @@
+{
+	"http": {
+		"port": 6075
+	},
+	"prefix": "tenured",
+	"data": "/data/tenured",
+	"registry": {
+		"address": "consul://127.0.0.1:8500",
+		"attributes": {
+			"checkType": "http",
+			"health": "/health"
+		}
+	},
+	"storeClient": {
+		"type": "leveldb"
+	}
+}

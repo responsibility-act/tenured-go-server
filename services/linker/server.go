@@ -2,11 +2,14 @@ package linker
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/api/invoke"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
+	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/cache"
+	"github.com/ihaiker/tenured-go-server/registry/load_balance"
 	"github.com/ihaiker/tenured-go-server/registry/plugins"
 	"hash/crc64"
 )
@@ -20,11 +23,25 @@ type LinkerServer struct {
 	serviceManager  commons.ServiceManager
 	executorManager executors.ExecutorManager
 
-	registryPlugin registry.Plugins
+	registryPlugin    registry.Plugins
+	storeClientPlugin engine.StoreClientPlugin
+	clientLoadBalance load_balance.LoadBalance
 }
 
 func NewLinkerServer(config *linkerConfig) *LinkerServer {
 	return &LinkerServer{config: config}
+}
+
+func (this *LinkerServer) initStoreClientPlugin() (err error) {
+	storeServerName := this.config.Prefix + "_store"
+	if this.storeClientPlugin, err = engine.GetStoreClientPlugin(storeServerName, this.config.Engine, this.reg); err != nil {
+		return err
+	}
+	this.serviceManager.Add(storeServerName)
+
+	this.clientLoadBalance = this.storeClientPlugin.LoadBalance()
+	this.serviceManager.Add(this.clientLoadBalance)
+	return nil
 }
 
 func (this *LinkerServer) initTenuredServer() (err error) {
@@ -38,9 +55,10 @@ func (this *LinkerServer) initTenuredServer() (err error) {
 		Module:  fmt.Sprintf("%s_%s", this.config.Prefix, "linker"),
 		Address: this.address,
 	}
-	if this.server.AuthChecker, err = NewLinkerAuthChecker(); err != nil {
+	if this.server.AuthChecker, err = NewLinkerAuthChecker(this.address, this.clientLoadBalance); err != nil {
 		return err
 	}
+	this.server.SetSessionManager(protocol.NewMapSessionManager())
 	this.serviceManager.Add(this.server)
 	return nil
 }
@@ -101,6 +119,13 @@ func (this *LinkerServer) registryServer() error {
 	}
 }
 
+func (this *LinkerServer) registryCommandHandler() error {
+	executorManager := executors.NewExecutorManager(executors.NewSingleExecutorService(1))
+	this.serviceManager.Add(executorManager)
+	invokeServer := NewLinkerCommandHandler(this.server.GetSessionManager())
+	return invoke.NewLinkerServiceInvoke(this.server, invokeServer, executorManager)
+}
+
 func (this *LinkerServer) Start() (err error) {
 	logger.Info("start linker server")
 	this.initExecutorManager()
@@ -110,10 +135,19 @@ func (this *LinkerServer) Start() (err error) {
 	if err = this.initTenuredServer(); err != nil {
 		return
 	}
+	if err = this.initStoreClientPlugin(); err != nil {
+		return
+	}
+	if err = this.registryCommandHandler(); err != nil {
+		return
+	}
+	if err = this.serviceManager.Start(); err != nil {
+		return
+	}
 	if err = this.registryServer(); err != nil {
 		return
 	}
-	return this.serviceManager.Start()
+	return nil
 }
 
 func (this *LinkerServer) Shutdown(interrupt bool) {

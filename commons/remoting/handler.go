@@ -23,21 +23,21 @@ type HandlerWrapper struct {
 }
 
 func (h *HandlerWrapper) OnChannel(c RemotingChannel) error {
-	logger.Debugf("RemotingHandler OnChannel %s", c.RemoteAddr())
+	//logger.Debugf("RemotingHandler OnChannel %s", c.RemoteAddr())
 	return nil
 }
 func (h *HandlerWrapper) OnMessage(c RemotingChannel, msg interface{}) {
-	logger.Debugf("RemotingHandler OnMessage %s : msg:%v", c.RemoteAddr(), msg)
+	//logger.Debugf("RemotingHandler OnMessage %s : msg:%v", c.RemoteAddr(), msg)
 }
 
 func (h *HandlerWrapper) OnClose(c RemotingChannel) {
-	logger.Debugf("RemotingHandler OnClose %s ", c.RemoteAddr())
+	//logger.Debugf("RemotingHandler OnClose %s ", c.RemoteAddr())
 }
 
 func (h *HandlerWrapper) OnError(c RemotingChannel, err error, msg interface{}) {
-	logger.Debugf("RemotingHandler OnError %s : %s ,%v", c.RemoteAddr(), err, msg)
+	//logger.Debugf("RemotingHandler OnError %s : %s ,%v", c.RemoteAddr(), err, msg)
 }
 
 func (h *HandlerWrapper) OnIdle(c RemotingChannel) {
-	logger.Debugf("RemotingHandler OnIdle : %s", c.RemoteAddr())
+	//logger.Debugf("RemotingHandler OnIdle : %s", c.RemoteAddr())
 }
