@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry/cache"
 	"github.com/ihaiker/tenured-go-server/registry/plugins"
@@ -32,54 +33,42 @@ type storeServer struct {
 	serviceManager *commons.ServiceManager
 }
 
-func (this *storeServer) init() error {
-	this.initExecutorManager()
-
-	if err := this.initRegistry(); err != nil {
-		return err
+func (this *storeServer) init() (err error) {
+	if err = this.initExecutorManager(); err != nil {
+		return
 	}
-	if err := this.initTenuredServer(); err != nil {
-		return err
+	if err = this.initRegistry(); err != nil {
+		return
 	}
-	if err := this.initServicesInvoke(); err != nil {
-		return err
+	if err = this.initTenuredServer(); err != nil {
+		return
+	}
+	if err = this.initServicesInvoke(); err != nil {
+		return
 	}
 	return nil
 }
 
-func (this *storeServer) initExecutorManager() {
+func (this *storeServer) initExecutorManager() error {
 	this.executorManager = executors.NewExecutorManager(executors.NewFixedExecutorService(256, 10000))
-
-	for k, _ := range this.config.Executors {
-		if ek, has := this.config.Executors.Get(k); has {
-			switch ek.Type {
-			case "fix":
-				this.executorManager.Fix(k, ek.Param[0], ek.Param[1])
-			case "single":
-				this.executorManager.Single(k, ek.Param[0])
-			case "scheduled":
-
-			}
-		}
+	if err := this.executorManager.Config(this.config.Executors); err != nil {
+		return err
 	}
 	this.serviceManager.Add(this.executorManager)
+	return nil
 }
 
 func (this *storeServer) initTenuredServer() (err error) {
 	if this.address, err = this.config.Tcp.GetAddress(); err != nil {
 		return err
 	}
-
 	if this.server, err = protocol.NewTenuredServer(this.address, this.config.Tcp.RemotingConfig); err != nil {
 		return err
 	}
-
 	this.server.AuthHeader = &protocol.AuthHeader{
-		Module:     fmt.Sprintf("%s_%s", this.config.Prefix, "store"),
-		Address:    this.address,
-		Attributes: this.config.Tcp.Attributes,
+		Module:  mixins.Store(this.config.Prefix),
+		Address: this.address,
 	}
-
 	this.serviceManager.Add(this.server)
 	return nil
 }
@@ -180,7 +169,7 @@ func (this *storeServer) initRegistry() error {
 
 func (this *storeServer) registryService() error {
 	//注册服务名称
-	serverName := this.config.Prefix + "_store"
+	serverName := mixins.Store(this.config.Prefix)
 	//获取集群ID
 	clusterId, firstStartTime, err := this.ClusterID(serverName)
 	if err != nil {

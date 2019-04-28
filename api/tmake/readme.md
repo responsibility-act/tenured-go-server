@@ -1,4 +1,4 @@
-# 通讯协议生成器
+# 通讯协议生成器 TCD ( tenured client definition )
 
    时间紧张代码真是很乱哦。
 

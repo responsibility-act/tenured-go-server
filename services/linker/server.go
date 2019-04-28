@@ -5,6 +5,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/api/invoke"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
@@ -52,7 +53,7 @@ func (this *LinkerServer) initTenuredServer() (err error) {
 		return err
 	}
 	this.server.AuthHeader = &protocol.AuthHeader{
-		Module:  fmt.Sprintf("%s_%s", this.config.Prefix, "linker"),
+		Module:  mixins.Linker(this.config.Prefix),
 		Address: this.address,
 	}
 	if this.server.AuthChecker, err = NewLinkerAuthChecker(this.address, this.clientLoadBalance); err != nil {
@@ -63,22 +64,13 @@ func (this *LinkerServer) initTenuredServer() (err error) {
 	return nil
 }
 
-func (this *LinkerServer) initExecutorManager() {
-	//TODO 需要实现 scheduled queue
+func (this *LinkerServer) initExecutorManager() error {
 	this.executorManager = executors.NewExecutorManager(executors.NewFixedExecutorService(256, 10000))
-	for k, _ := range this.config.Executors {
-		if ek, has := this.config.Executors.Get(k); has {
-			switch ek.Type {
-			case "fix":
-				this.executorManager.Fix(k, ek.Param[0], ek.Param[1])
-			case "single":
-				this.executorManager.Single(k, ek.Param[0])
-			case "scheduled":
-
-			}
-		}
+	if err := this.executorManager.Config(this.config.Executors); err != nil {
+		return err
 	}
 	this.serviceManager.Add(this.executorManager)
+	return nil
 }
 
 func (this *LinkerServer) initRegistry() error {
@@ -128,7 +120,9 @@ func (this *LinkerServer) registryCommandHandler() error {
 
 func (this *LinkerServer) Start() (err error) {
 	logger.Info("start linker server")
-	this.initExecutorManager()
+	if err = this.initExecutorManager(); err != nil {
+		return
+	}
 	if err = this.initRegistry(); err != nil {
 		return
 	}

@@ -61,6 +61,7 @@ func TestRequestToken(t *testing.T) {
 	rt.AccountId = 1
 	rt.CloudId = 1
 	rt.IPAddress = "192.168.1.151"
+	rt.Linker = ""
 
 	rp, err := server.RequestLoginToken(rt)
 	assert.Nil(t, err)

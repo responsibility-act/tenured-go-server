@@ -63,10 +63,5 @@ func NewLoadBalance(serverName string, reg registry.ServiceRegistry) load_balanc
 	{
 		lbm.AddLoadBalance(api.ClusterIdServiceGet, load_balance.NewRoundLoadBalance(serverName, api.StoreClusterId, reg))
 	}
-
-	// linker
-	{
-		lbm.AddLoadBalance(api.LinkerServiceGetLinkedCount, load_balance.NewNoneLoadBalance(serverName, "", reg))
-	}
 	return lbm
 }

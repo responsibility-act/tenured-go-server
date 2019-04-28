@@ -13,7 +13,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -37,10 +36,8 @@ type UserServer struct {
 	reg         registry.ServiceRegistry
 	loadBalance load_balance.LoadBalance
 
-	search  api.SearchService
-	cluster api.UserService
-	linker  api.LinkerService
-
+	search         api.SearchService
+	cluster        api.UserService
 	serviceManager *commons.ServiceManager
 }
 
@@ -133,23 +130,11 @@ func (this *UserServer) RequestLoginToken(req *api.TokenRequest) (*api.TokenResp
 		return nil, err
 	}
 
-	minLinkCount := int32(math.MaxInt32 - 1)
-	linker := ""
-	gl := new(load_balance.GlobalLoading)
-	for gl.NextNode() {
-		if v, err := this.linker.GetLinkedCount(gl); err != nil {
-			return nil, protocol.ErrorHandler(err)
-		} else {
-			if commons.ToInt32(v) < minLinkCount {
-				linker = gl.Server.Address
-			}
-		}
-	}
-
 	uuidV4, _ := uuid.NewV4()
 	token := &api.TokenResponse{
-		Token:  strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
-		Linker: linker, ExpireTime: req.ExpireTime,
+		Token:      strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
+		Linker:     req.Linker,
+		ExpireTime: req.ExpireTime,
 	}
 	key := tokenKey(req.AccountId, req.AppId, req.CloudId)
 	val, _ := json.Marshal(token)
@@ -180,8 +165,7 @@ func (this *UserServer) Start() (err error) {
 	this.loadBalance = NewLoadBalance(this.storeName, this.reg)
 	this.search = client.NewSearchServiceClient(this.loadBalance)
 	this.cluster = client.NewUserServiceClient(this.loadBalance)
-	this.linker = client.NewLinkerServiceClient(this.loadBalance)
-	this.serviceManager.Add(this.loadBalance, this.search, this.cluster, this.linker)
+	this.serviceManager.Add(this.loadBalance, this.search, this.cluster)
 
 	if err = os.MkdirAll(this.dataPath, 0755); err != nil {
 		logger.Error("start account store error: ", err)

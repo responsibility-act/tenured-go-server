@@ -12,8 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
 )
 
 type Registry struct {
@@ -32,22 +30,6 @@ type Tcp struct {
 type ExecutorParam struct {
 	Type  string
 	Param []int
-}
-
-type Executors map[string]string
-
-func (this *Executors) Get(key string) (*ExecutorParam, bool) {
-	if val, has := (*this)[key]; has {
-		m := regexp.MustCompile(`(fix|single|scheduled)\((\d+),?(\d+)?\)`)
-		gs := m.FindStringSubmatch(val)
-
-		param := make([]int, len(gs[2:]))
-		for i := 0; i < len(gs[2:]); i++ {
-			param[i], _ = strconv.Atoi(gs[2+i])
-		}
-		return &ExecutorParam{Type: gs[1], Param: param}, true
-	}
-	return nil, false
 }
 
 type Logs struct {

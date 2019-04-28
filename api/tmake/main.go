@@ -59,7 +59,12 @@ func main() {
 		log.Fatal("至少制定一个接口配置文件")
 	}
 
+	isStore := true
 	apis := os.Args[1:]
+	if apis[0] == "service" {
+		apis = apis[1:]
+		isStore = false
+	}
 	for k, v := range apis {
 		absPath, _ := filepath.Abs(v)
 		apis[k] = absPath
@@ -150,7 +155,7 @@ func main() {
 	}
 
 	//interface
-	{
+	if isStore {
 		f := commons.NewFile("stores_tcd.go")
 		if f.Exist() {
 			_ = os.Remove(f.GetPath())

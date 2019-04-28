@@ -74,6 +74,9 @@ type TokenRequest {
     //用户使用的登录的IP地址
     IPAddress string
 
+    //linker 用户连接那个服务
+    Linker string
+
     //过期时间，不用过期不填写
     ExpireTime string empty
 }
@@ -82,7 +85,7 @@ type TokenResponse {
     //用户token
     Token string
 
-    //用户连接地址
+    //linker 用户连接那个服务
     Linker string
 
     //过期时间，不用过期不填写

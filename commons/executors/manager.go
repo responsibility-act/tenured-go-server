@@ -1,6 +1,12 @@
 package executors
 
-import "github.com/ihaiker/tenured-go-server/commons"
+import (
+	"fmt"
+	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/kataras/iris/core/errors"
+	"regexp"
+	"strconv"
+)
 
 type ExecutorManager interface {
 	commons.Service
@@ -8,6 +14,8 @@ type ExecutorManager interface {
 	Get(name string) ExecutorService
 	Fix(name string, size, buffer int) ExecutorService
 	Single(name string, buffer int) ExecutorService
+
+	Config(config map[string]string) error
 }
 
 type defExecutorManager struct {
@@ -41,6 +49,45 @@ func (this *defExecutorManager) Single(module string, buffer int) ExecutorServic
 		this.executorMap[module] = executor
 		return executor
 	}
+}
+
+func executorParam(value string) (exeType string, param []int, err error) {
+	m := regexp.MustCompile(`(fix|single|scheduled)\((\d+),?(\d+)?\)`)
+	if m.MatchString(value) {
+		gs := m.FindStringSubmatch(value)
+
+		param := make([]int, len(gs[2:]))
+		for i := 0; i < len(gs[2:]); i++ {
+			param[i], _ = strconv.Atoi(gs[2+i])
+		}
+		return gs[0], param, nil
+	} else {
+		return "", nil, errors.New("执行定义错误: " + value)
+	}
+}
+
+func (this *defExecutorManager) Config(config map[string]string) error {
+	for executorName, configValue := range config {
+		if _, has := this.executorMap[executorName]; !has {
+			if execType, param, err := executorParam(configValue); err != nil {
+				return err
+			} else {
+				switch execType {
+				case "fix":
+					this.Fix(execType, param[0], param[1])
+				case "single":
+					this.Single(execType, param[0])
+				case "scheduled":
+					//TODO 需要实现 scheduled queue
+				default:
+					return errors.New(fmt.Sprintf("未发现执行线程池定义方案：%s = %s", executorName, configValue))
+				}
+			}
+		} else {
+			return errors.New(fmt.Sprintf("执行线程池重复定义：%s", executorName))
+		}
+	}
+	return nil
 }
 
 func (this *defExecutorManager) Start() error {

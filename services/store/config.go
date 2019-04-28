@@ -22,7 +22,7 @@ type storeConfig struct {
 
 	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
 
-	Executors services.Executors `json:"executors" yaml:"executors"`
+	Executors map[string]string `json:"executors" yaml:"executors"`
 
 	Engine *engine.StoreEngineConfig `json:"engine" yaml:"engine"`
 }
@@ -61,6 +61,6 @@ func NewStoreConfig() *storeConfig {
 				"dataPath": mixins.Get(mixins.KeyDataPath, mixins.DataPath),
 			},
 		},
-		Executors: services.Executors(map[string]string{}),
+		Executors: map[string]string{},
 	}
 }

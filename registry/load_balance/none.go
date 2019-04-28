@@ -21,7 +21,7 @@ func (this *GlobalLoading) NextNode() bool {
 
 type noneLoadBalance struct {
 	serverName string
-	serverTag  string
+	serverTag  []string
 	reg        registry.ServiceRegistry
 }
 
@@ -32,7 +32,7 @@ func (this *noneLoadBalance) Select(requestCode uint16, obj ...interface{}) ([]*
 
 	if gl, match := obj[0].(*GlobalLoading); !match {
 		return nil, "", errors.New("global loading is must.")
-	} else if ss, err := this.reg.Lookup(this.serverName, []string{this.serverTag}); err != nil {
+	} else if ss, err := this.reg.Lookup(this.serverName, this.serverTag); err != nil {
 		return nil, "", err
 	} else {
 		if len(ss) < gl.CurrentNode+1 {
@@ -50,7 +50,13 @@ func (this *noneLoadBalance) Return(requestCode uint16, key string) {
 }
 
 func NewNoneLoadBalance(serverName string, serverTag string, reg registry.ServiceRegistry) LoadBalance {
-	return &noneLoadBalance{
-		serverName: serverName, serverTag: serverTag, reg: reg,
+	lb := &noneLoadBalance{
+		serverName: serverName, reg: reg,
 	}
+	if serverTag == "" {
+		lb.serverTag = []string{}
+	} else {
+		lb.serverTag = []string{serverTag}
+	}
+	return lb
 }

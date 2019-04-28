@@ -3,6 +3,7 @@ package tenant
 import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/cache"
@@ -54,7 +55,7 @@ func (this *TenantServer) startRegistry() error {
 }
 
 func (this *TenantServer) initClientPlugin() error {
-	storeName := this.config.Prefix + "_store"
+	storeName := mixins.Store(this.config.Prefix)
 	if clientPlugin, err := engine.GetStoreClientPlugin(storeName, this.config.StoreClient, this.reg); err != nil {
 		return err
 	} else {

@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/cache"
@@ -43,7 +44,7 @@ func (this *ConsoleServer) startRegistry() error {
 		return err
 	} else {
 		address, _ := this.config.HTTP.GetAddress()
-		serverInstance.Name = this.config.Prefix + "_console"
+		serverInstance.Name = mixins.Console(this.config.Prefix)
 		serverInstance.Id = fmt.Sprintf("%v", crc64.Checksum([]byte(address), crc64.MakeTable(crc64.ECMA)))
 		serverInstance.Address = address
 		if err := this.reg.Register(serverInstance); err != nil {

@@ -5,6 +5,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/api/invoke"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/executors"
+	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/engine"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
@@ -48,7 +49,7 @@ func (this *ServicesInvokeManager) aware(service interface{}) {
 }
 
 func (this *ServicesInvokeManager) Start() (err error) {
-	storeServerName := this.config.Prefix + "_store"
+	storeServerName := mixins.Store(this.config.Prefix)
 
 	if this.storePlugins, err = engine.GetStorePlugin(storeServerName, this.config.Engine); err != nil {
 		return err

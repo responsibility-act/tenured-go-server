@@ -21,7 +21,7 @@ type linkerConfig struct {
 
 	Tcp *services.Tcp `json:"tcp" yaml:"tcp"`
 
-	Executors services.Executors `json:"executors" yaml:"executors"`
+	Executors map[string]string `json:"executors" yaml:"executors"`
 
 	Engine *engine.StoreEngineConfig `json:"engine" yaml:"engine"`
 }
@@ -47,6 +47,6 @@ func NewLinkerConfig() *linkerConfig {
 		Engine: &engine.StoreEngineConfig{
 			Type: "leveldb",
 		},
-		Executors: services.Executors(map[string]string{}),
+		Executors: map[string]string{},
 	}
 }

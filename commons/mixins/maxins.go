@@ -46,3 +46,27 @@ func GetInt(key string, value int) int {
 	}
 	return value
 }
+
+func serverName(prefix, server string) string {
+	if prefix == "" {
+		return server
+	} else {
+		return prefix + "_" + server
+	}
+}
+
+func Store(prefix string) string {
+	return serverName(prefix, "store")
+}
+
+func Linker(prefix string) string {
+	return serverName(prefix, "linker")
+}
+
+func Console(prefix string) string {
+	return serverName(prefix, "console")
+}
+
+func Tenant(prefix string) string {
+	return serverName(prefix, "tenant")
+}
