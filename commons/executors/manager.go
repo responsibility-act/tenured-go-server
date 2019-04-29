@@ -60,7 +60,7 @@ func executorParam(value string) (exeType string, param []int, err error) {
 		for i := 0; i < len(gs[2:]); i++ {
 			param[i], _ = strconv.Atoi(gs[2+i])
 		}
-		return gs[0], param, nil
+		return gs[1], param, nil
 	} else {
 		return "", nil, errors.New("执行定义错误: " + value)
 	}

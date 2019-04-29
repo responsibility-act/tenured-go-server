@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"fmt"
+	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/mixins"
 	"github.com/ihaiker/tenured-go-server/engine"
@@ -70,7 +71,13 @@ func (this *TenantServer) initHttpServer() error {
 	if err != nil {
 		return err
 	}
-	this.httpServer = ctl.NewHttpServer(httpAddress, this.storeClientLoadBalance)
+	ctl.AccountService = client.NewAccountServiceClient(this.storeClientLoadBalance)
+	ctl.ClusterIdService = client.NewClusterIdServiceClient(this.storeClientLoadBalance)
+	ctl.UserService = client.NewUserServiceClient(this.storeClientLoadBalance)
+	ctl.LinkerService = client.NewLinkerServiceClient(load_balance.NewNoneLoadBalance(mixins.Linker(this.config.Prefix), "", this.reg))
+	this.serviceManager.Add(ctl.AccountService, ctl.ClusterIdService, ctl.UserService, ctl.LinkerService)
+
+	this.httpServer = ctl.NewHttpServer(httpAddress)
 	this.serviceManager.Add(this.httpServer)
 	return nil
 }

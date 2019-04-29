@@ -6,19 +6,19 @@ import (
 )
 
 func init() {
-	user := app.Party("/user", tenantAuth)
+	user := app.Party("/user")
 	{
-		user.Post("/add", addUser)
-		user.Post("/token", requestToken)
+		user.Post("/add", tenantAuth(addUser))
+		user.Post("/token", tenantAuth(requestToken))
 	}
 }
 
-func addUser(ctx context.Context) {
+func addUser(app *api.App, ctx context.Context) {
 
 }
 
 //获取登录TOKEN
-func requestToken(ctx context.Context) {
+func requestToken(app *api.App, ctx context.Context) {
 	rt := new(api.TokenRequest)
 	if err := ctx.ReadJSON(rt); err != nil {
 		writeJson(ctx, err)
@@ -26,7 +26,7 @@ func requestToken(ctx context.Context) {
 		accountId, appId := aa(ctx)
 		rt.AccountId = accountId
 		rt.AppId = appId
-		if rp, err := userService.RequestLoginToken(rt); err != nil {
+		if rp, err := UserService.RequestLoginToken(rt); err != nil {
 			writeJson(ctx, err)
 		} else {
 			writeJson(ctx, rp)

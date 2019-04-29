@@ -2,13 +2,10 @@ package ctl
 
 import (
 	"context"
-	"github.com/ihaiker/tenured-go-server/protocol"
-	"github.com/ihaiker/tenured-go-server/registry/load_balance"
-
 	"github.com/ihaiker/tenured-go-server/api"
-	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
+	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/kataras/iris"
 	ctx "github.com/kataras/iris/context"
 	"time"
@@ -17,40 +14,25 @@ import (
 var app = iris.Default()
 var logger = logs.GetLogger("ctrl")
 
-var userService api.UserService
-var accountService api.AccountService
-var clusterIdService api.ClusterIdService
+var UserService api.UserService
+var AccountService api.AccountService
+var ClusterIdService api.ClusterIdService
+var LinkerService api.LinkerService
 
 type HttpServer struct {
 	http           string
 	serviceManager *commons.ServiceManager
 }
 
-func allService() []interface{} {
-	return []interface{}{clusterIdService, userService, accountService}
-}
-
-func (this *HttpServer) startService() (err error) {
-	for _, s := range allService() {
-		if err = commons.StartIfService(s); err != nil {
-			return
-		}
-	}
-	return nil
-}
-
 func (this *HttpServer) Start() (err error) {
 	logger.Debug("http server start: ", this.http)
-	if err = this.startService(); err != nil {
-		return
-	}
 	app.Logger().SetLevel(logger.Level.String())
 	app.Logger().SetOutput(logger.Out)
 	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
 	app.Logger().SetPrefix("(iris) ")
 
 	app.Get("/health", func(ctx ctx.Context) {
-		ctx.JSON(map[string]interface{}{"status": "UP"})
+		_, _ = ctx.JSON(map[string]interface{}{"status": "UP"})
 	})
 
 	startErr := make(chan error, 0)
@@ -72,24 +54,13 @@ func (this *HttpServer) Start() (err error) {
 	}
 }
 
-func (this *HttpServer) shutdownService(interrupt bool) {
-	for _, s := range allService() {
-		commons.ShutdownIfService(s, interrupt)
-	}
-}
-
 func (this *HttpServer) Shutdown(interrupt bool) {
-	this.shutdownService(interrupt)
-
 	if err := app.Shutdown(context.Background()); err != nil {
 		logger.Error("shutdown console http server error:", err)
 	}
 }
 
-func NewHttpServer(http string, storeClientLoadBalance load_balance.LoadBalance) *HttpServer {
-	accountService = client.NewAccountServiceClient(storeClientLoadBalance)
-	clusterIdService = client.NewClusterIdServiceClient(storeClientLoadBalance)
-	userService = client.NewUserServiceClient(storeClientLoadBalance)
+func NewHttpServer(http string) *HttpServer {
 	return &HttpServer{http: http}
 }
 
