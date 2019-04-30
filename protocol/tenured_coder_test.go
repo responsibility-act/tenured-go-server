@@ -2,6 +2,9 @@ package protocol
 
 import (
 	"bytes"
+	"encoding/base64"
+	"fmt"
+	"log"
 
 	"github.com/ihaiker/tenured-go-server/commons/remoting"
 	"github.com/stretchr/testify/assert"
@@ -49,4 +52,15 @@ func TestTenuredCoder_Response(t *testing.T) {
 	assert.False(t, dResp.IsSuccess())
 	t.Log(string(dResp.header))
 	t.Log(string(dResp.Body))
+}
+
+func TestTenuredCoder_Decode(t *testing.T) {
+	decodeBytes, err := base64.StdEncoding.DecodeString("AAAAGAAAKwMADBUAABpoZWFkZXJib2R5")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(string(decodeBytes))
+
+	msg, err := c.Decode(nil, bytes.NewReader(decodeBytes))
+	t.Log(msg, err)
 }

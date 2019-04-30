@@ -23,9 +23,8 @@ func requestToken(app *api.App, ctx context.Context) {
 	if err := ctx.ReadJSON(rt); err != nil {
 		writeJson(ctx, err)
 	} else {
-		accountId, appId := aa(ctx)
-		rt.AccountId = accountId
-		rt.AppId = appId
+		rt.AccountId = app.AccountId
+		rt.AppId = app.Id
 		if rp, err := UserService.RequestLoginToken(rt); err != nil {
 			writeJson(ctx, err)
 		} else {

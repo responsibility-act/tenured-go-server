@@ -42,7 +42,7 @@ func (this *tenuredCoder) Decode(channel remoting.RemotingChannel, reader io.Rea
 
 	command.Version = uint8((vf >> 24) & 0xFF)
 	command.flag = int(vf & 3 /*0b11*/)
-	headerLength := int((vf & 0x3FFFFF) >> 2)
+	headerLength := int((vf >> 2) & 0x3FFFFF)
 	if headerLength > 0 {
 		command.header = make([]byte, headerLength, headerLength)
 		if i, err := reader.Read(command.header); err != nil {
