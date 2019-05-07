@@ -12,10 +12,17 @@ else
 debug=
 endif
 
-build: generate plugins main
-
-main:
+build: generate plugins
 	go build -ldflags "${debug} ${param}" -o ${tenured} tenured.go
+
+build-windows: generate plugins
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "${debug} ${param}" -o ${tenured}.exe tenured.go
+
+build-linux: generate plugins
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${debug} ${param}" -o ${tenured} tenured.go
+
+depends:
+	GOPROXY=https://goproxy.io GO111MODULE=on go mod download
 
 generate:
 	go generate api/generator.go

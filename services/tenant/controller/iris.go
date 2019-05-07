@@ -24,13 +24,26 @@ type HttpServer struct {
 	serviceManager *commons.ServiceManager
 }
 
+func id() (uint64, error) {
+	idBody, err := ClusterIdService.Get()
+	if err != nil {
+		return 0, err
+	}
+	return commons.ToUInt64(idBody), nil
+}
+
 func (this *HttpServer) Start() (err error) {
 	logger.Debug("http server start: ", this.http)
 	app.Logger().SetLevel(logger.Level.String())
 	app.Logger().SetOutput(logger.Out)
 	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
 	app.Logger().SetPrefix("(iris) ")
-
+	app.OnErrorCode(iris.StatusNotFound, func(ctx iris.Context) {
+		writeJson(ctx, protocol.NewError("404", "NotFound"))
+	})
+	app.OnErrorCode(iris.StatusInternalServerError, func(ctx iris.Context) {
+		writeJson(ctx, protocol.NewError("502", "InternalServerError"))
+	})
 	app.Get("/health", func(ctx ctx.Context) {
 		_, _ = ctx.JSON(map[string]interface{}{"status": "UP"})
 	})

@@ -13,7 +13,6 @@ type ServerInstanceAttrs interface {
 }
 
 type ServerInstance struct {
-	//serverID 全局唯一,使用uuid方式生成
 	Id string
 
 	//服务名称，例如：推送服务(push)，API服务（api）

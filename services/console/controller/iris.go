@@ -48,6 +48,12 @@ func (this *HttpServer) Start() (err error) {
 	app.Logger().SetOutput(logger.Out)
 	app.Logger().SetTimeFormat("2006-01-02 15:04:05")
 	app.Logger().SetPrefix("(iris) ")
+	app.OnErrorCode(iris.StatusNotFound, func(ctx iris.Context) {
+		writeJson(ctx, protocol.NewError("404", "NotFound"))
+	})
+	app.OnErrorCode(iris.StatusInternalServerError, func(ctx iris.Context) {
+		writeJson(ctx, protocol.NewError("502", "InternalServerError"))
+	})
 
 	app.Get("/health", func(ctx ctx.Context) {
 		ctx.JSON(map[string]interface{}{"status": "UP"})

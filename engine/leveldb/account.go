@@ -230,6 +230,7 @@ func (this *AccountServer) ApplyApp(app *api.App) *protocol.TenuredError {
 	}
 
 	app.Status = api.AccountStatusApply
+	app.CreateTime = time.Now().Format("2006-01-02 15:04:05")
 
 	bs, _ := json.Marshal(app)
 	batch := &leveldb.Batch{}

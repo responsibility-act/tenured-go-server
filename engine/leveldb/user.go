@@ -3,13 +3,13 @@ package leveldb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/api/client"
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/registry"
 	"github.com/ihaiker/tenured-go-server/registry/load_balance"
-	uuid "github.com/satori/go.uuid"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -130,7 +130,7 @@ func (this *UserServer) RequestLoginToken(req *api.TokenRequest) (*api.TokenResp
 		return nil, err
 	}
 
-	uuidV4, _ := uuid.NewV4()
+	uuidV4 := uuid.New().String()
 	token := &api.TokenResponse{
 		Token:      strings.ToUpper(strings.ReplaceAll(uuidV4.String(), "-", "")),
 		Linker:     req.Linker,
