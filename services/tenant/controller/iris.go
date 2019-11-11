@@ -6,8 +6,8 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/commons/logs"
 	"github.com/ihaiker/tenured-go-server/protocol"
-	"github.com/kataras/iris"
-	ctx "github.com/kataras/iris/context"
+	"github.com/kataras/iris/v12"
+	ctx "github.com/kataras/iris/v12/context"
 	"time"
 )
 

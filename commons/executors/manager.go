@@ -3,7 +3,7 @@ package executors
 import (
 	"fmt"
 	"github.com/ihaiker/tenured-go-server/commons"
-	"github.com/kataras/iris/core/errors"
+	"errors"
 	"regexp"
 	"strconv"
 )

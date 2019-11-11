@@ -3,7 +3,7 @@ package ctl
 import (
 	"github.com/ihaiker/tenured-go-server/api"
 	"github.com/ihaiker/tenured-go-server/services"
-	"github.com/kataras/iris/context"
+	"github.com/kataras/iris/v12/context"
 	"time"
 )
 

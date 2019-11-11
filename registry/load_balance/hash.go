@@ -6,7 +6,7 @@ import (
 	"github.com/emirpasic/gods/utils"
 	"github.com/ihaiker/tenured-go-server/registry"
 
-	"github.com/kataras/iris/core/errors"
+	"errors"
 	"hash/crc64"
 	"strconv"
 )

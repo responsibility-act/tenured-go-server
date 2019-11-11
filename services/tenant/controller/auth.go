@@ -5,7 +5,7 @@ import (
 	"github.com/ihaiker/tenured-go-server/commons"
 	"github.com/ihaiker/tenured-go-server/protocol"
 	"github.com/ihaiker/tenured-go-server/services"
-	"github.com/kataras/iris/context"
+	"github.com/kataras/iris/v12/context"
 	"strconv"
 )
 
